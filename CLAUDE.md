@@ -1,20 +1,32 @@
 # CLAUDE.md — 研究資料夾說明
 
+For tokens efficiency, if you have to think heavily / process disposable content(debugging, code review, scratch analysis), use English instead of Chinese.
+
+---
+
+## 對話啟動程序
+
+**每次對話開始前，必須先讀取 `memory.md`**，掌握跨對話的進度、下次繼續的地方、重要提醒。需要更細節時，再依索引讀取 `memory/` 內對應分類檔案。
+
+寫入記憶時：在 `memory/` 對應分類檔案最上方新增 `## YYYY-MM-DD` 段落，最新日期置頂；必要時同步更新 `memory.md` 的「當前進度」「下次繼續」「重要提醒」。
+
 ---
 
 ## 當前進度
 
 > 此章節最常更新，反映研究的即時狀態。
 
-**研究階段**：選題收斂 + Deep Dive 啟動
+**研究階段**：題目已鎖定，進入 positioning scan + baseline 實作
 
-**當前聚焦方向**：以終為始，本月內鎖定 Bin-Packing 子問題並產出視覺化原型，作為 Special Topic 報告內容
+**當前聚焦方向**：Dynamic 2D Rectangle BP（abstract framing），先做 positioning scan 釐清現有方法邊界，再進入 baseline 實作
 
 **To-dos**：
-- [ ] **想像終點**：用一段話／草圖描述 Special Topic 要 present 的視覺化成果長什麼樣（什麼問題、什麼資料、什麼互動或動畫、看完讓人理解什麼）。這份「終點圖像」會反推題目選擇
-- [ ] **本週選題**（5/10 前）：從先前列出的 Bin-Packing 應用候選中，挑一個「可視覺化、資料拿得到、一個月內能跑出 baseline」的子問題定下來
+- [x] **本週選題**（5/10 前）：**已鎖定** Dynamic 2D Rectangle BP + abstract framing（不綁特定場域），narrative（A 原版 vs E 變體）5/31 前決定。詳見 `memory.md` 題目定義段
+- [ ] **2–3 天 positioning scan**：先讀 `memory/literature-map.md` 列的 3 篇 survey（Christensen 2017 / Lodi 2002 / Coffman 2013），再依關鍵字延伸；回答「別人優化過什麼 / 邊界在哪 / 我的觀察落在哪個邊界外」
+- [ ] **第 1–2 週**：2D BLF baseline + 合成 arrival/departure workload generator（Hopper-Turton benchmark 改造）
+- [ ] **5/31 前**：根據實作結果決定 narrative（A 原版 = heuristic 退化比較 / E 變體 = failure mode taxonomy）
 - [ ] **6 月前**產出視覺化原型（即使只是 baseline 跑得出來、能畫出結果的版本）
-- [ ] **6/8 報告週前**完成 8 成報告內容（題目動機、baseline、初步結果、視覺化 demo）
+- [ ] **6/8 報告週前**完成 8 成報告內容（題目動機、baseline、初步結果、視覺化 demo），結尾立得起 next-step claim
 
 ---
 
@@ -33,14 +45,44 @@
 ```
 research/
 ├── CLAUDE.md          # 本文件，提供 Claude 專案背景與當前進度
+├── memory.md          # 跨對話記憶索引：當前進度、下次繼續、重要提醒（對話開始必讀）
 ├── journal.md         # 研究日誌：焦點演變、想法迭代、放棄的方向
 ├── meeting-notes.md   # 與指導教授的會議紀錄
-└── context/
-    ├── advisor.md              # 指導教授研究背景、學生論文方向、方法論特徵
-    ├── department.md           # 系所定位、三大專業領域、論文題目隱含要求
-    ├── topic-fit-framework.md  # 論文選題的三維度契合度判斷框架
-    └── research-interests.md   # 個人研究興趣領域、視覺化定位、場域遷移構想
+├── memory/                          # 研究筆記層
+│   ├── research-decisions.md        # 研究方向決策、放棄的方向、選題理由
+│   ├── progress.md                  # 階段性進展、里程碑、卡關狀況
+│   ├── ideas.md                     # 研究點子、跨領域聯想、零散發想
+│   ├── candidate-topics.md          # Bin-Packing 候選題目完整分析
+│   ├── literature-map.md            # 文獻掃描中心：方法家族、關鍵字、survey 入口、H1–H5 假設驅動操作指引
+│   └── experiments.md               # 實作過程、踩過的雷、baseline 結果、資料來源
+├── context/                         # 研究背景層
+│   ├── advisor.md                   # 指導教授研究背景、學生論文方向、方法論特徵
+│   ├── department.md                # 系所定位、三大專業領域、論文題目隱含要求
+│   ├── topic-fit-framework.md       # 論文選題的三維度契合度判斷框架
+│   └── research-interests.md        # 個人研究興趣領域、視覺化定位、場域遷移構想
+├── paper/                           # 文獻 PDF（已下載的關鍵論文）
+└── code/                            # 程式碼層（所有實作放這裡，獨立 uv 專案）
+    ├── pyproject.toml               # uv 專案設定 + 依賴清單
+    ├── uv.lock
+    ├── .gitignore                   # code 專屬 ignore（venv / __pycache__ / 產出物）
+    ├── dyn2dbp/                     # 主套件
+    │   ├── core/                    # Item / BinState / Simulator
+    │   ├── heuristics/              # PlacementStrategy ABC + BLF / NFDH / FFDH / Shelf
+    │   ├── workloads/               # 合成 arrival/departure workload generator
+    │   ├── metrics/                 # PE、fragmentation metric、mode signature
+    │   ├── viz/                     # snapshot、animation、H×W 網格視覺化
+    │   └── experiments/             # factorial sweep runner
+    ├── tests/                       # pytest（測試 BinState / BLF / Simulator 不變量）
+    ├── scripts/                     # 一次性的 demo / 探索腳本
+    ├── notebooks/                   # Jupyter 探索用
+    ├── data/snapshots/              # 採集到的 bin 狀態時序快照（不入 git）
+    └── figures/                     # 產出的圖（不入 git）
 ```
+
+**程式相關所有指令在 `code/` 內執行**：
+- 跑測試：`cd code && uv run pytest`
+- 跑 demo：`cd code && uv run python scripts/demo_blf.py`
+- 起 Jupyter：`cd code && uv run jupyter lab`
 
 ---
 

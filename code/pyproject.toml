@@ -1,0 +1,26 @@
+[project]
+name = "dynamic-2dbp"
+version = "0.1.0"
+description = "Dynamic 2D Rectangle Bin Packing — failure mode taxonomy experiments (Special Topic, NTUST GIMT)"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0",
+    "matplotlib>=3.8",
+    "pandas>=2.2",
+    "tqdm>=4.66",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ipykernel>=6.29",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"
+pythonpath = ["."]

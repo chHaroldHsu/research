@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# uv
+.venv/
+.python-version
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# Output artifacts (keep dir, ignore contents)
+data/snapshots/*
+!data/snapshots/.gitkeep
+figures/*
+!figures/.gitkeep
