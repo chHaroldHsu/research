@@ -32,7 +32,7 @@
 | 週次 | 內容 | 狀態 |
 |---|---|---|
 | **第 1 週** | BLF baseline + Simulator + viz + tests | ✅ **完成**（5/14 開工，5/15 git push） |
-| **第 2 週** | Workload generator + metrics + animation | 🟡 **進行中**：generator ✅、5 presets ✅、bug fix ✅；metrics ❌、animation ❌、grid view ❌ |
+| **第 2 週** | Workload generator + metrics + animation | 🟡 **進行中**：generator ✅、5 presets ✅、bug fix ✅；**metrics 進行中**（types ✅、pe ✅、discard ❌、fragmentation ❌、`__init__` ❌）、animation ❌、grid view ❌ |
 | 第 3 週 | NFDH/FFDH/Shelf + factorial 掃描 | ⏳ 未開始 |
 | 第 4 週 | 命名 mode + signature + mitigation 對照表 + 寫報告 | ⏳ 未開始 |
 
@@ -53,9 +53,12 @@
 ### 立即下一步（第 2 週剩餘工作）
 
 1. **建 metrics 模組**（`code/dyn2dbp/metrics/`）——把眼睛看到的變成數字
-   - `pe.py`：time-series PE 曲線 + peak / mean / final 統計
-   - `discard.py`：discard rate 時序
-   - `fragmentation.py`：Tabero 周長平方積分（當對照組）
+   - ✅ `types.py`：frozen dataclass `TimeSeries` / `PEStats` / `DiscardStats` / `FragStats`（含 shape 驗證）
+   - ✅ `pe.py` + `tests/test_pe.py`：`pe_series` / `pe_stats`（time-weighted mean，排除 failed arrivals）；5 tests 全綠（全 suite 36 tests）
+     - 已用 5 preset sweep 驗證 peak / discard% 與 5/15 量化證據完美對齊；新觀察 mean/peak ratio：mixed=0.41（最低，短壽命快進快出）、large=0.59（最高，大 item 卡得久），可能是 mode signature 候選元件
+   - ❌ `discard.py`：cumulative + windowed discard rate 時序
+   - ❌ `fragmentation.py`：Tabero 周長平方積分（當對照組）
+   - ❌ `__init__.py`：re-export 公開 API
 2. **建 H × W grid view**（`code/dyn2dbp/viz/grid_view.py`）——5 個 preset peak snapshot 並排成 1 張圖；第 3 週命名 mode 的主要視覺工具
 3. **加 NFDH / FFDH / Shelf**（`code/dyn2dbp/heuristics/`）——湊齊 4 個 heuristic；第 3 週 factorial 前置
 
