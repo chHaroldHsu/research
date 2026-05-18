@@ -50,6 +50,8 @@
 
 ## 下次繼續（從另一設備接續時讀這段）
 
+- **實驗設計查表**：2026-05-18 已把 RL 評估兩層架構（訓練 vs 評估、optimal 分層）、多軸選擇（sample efficiency / generalization / robustness / hard-case，不單押 final PE）、NP-hard 參數設定三層架構（benchmark family / factorial sweep / regime stratification）整理進 `memory/experiments.md`。進階 6 設計 RL 實驗前直接查表
+
 ### 立即下一步（第 2 週剩餘工作）
 
 1. **建 metrics 模組**（`code/dyn2dbp/metrics/`）——把眼睛看到的變成數字
