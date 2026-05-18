@@ -7,68 +7,85 @@
 
 ## 2026-05-18
 
-### 實驗 setup 慣例
+### 方法論決策：RL 評估的兩層架構
 
-- **Bin 預設**：50×50（足夠看出 mode，跑得快）
-- **n_items 預設**：200（demo） / 500（之後 H×W scan）
-- **seed 預設**：42（demo）；factorial scan 會跨多個 seed 取統計
-- **Heuristic 目前可用**：BLF（暴力搜尋，y outer / x inner = bottom-left-fill）
-- **時間單位**：整數 tick；同 tick 多事件由 simulator 處理（departure 先於 arrival）
+對話釐清「RL 結果要基於 optimal 來優化嗎？」——拆成訓練 vs 評估兩件事。
 
-### Workload 模型（`dyn2dbp/workloads/synthetic.py`）
+**RL 訓練不需要 optimal 標籤**：RL 不是 supervised learning，靠 reward signal 自己探索。mode label 是當 state feature 注入 inductive bias，不是當監督 label。
 
-6 個 knob：
+**RL 評估的對照分層**（dynamic BP 下「optimal」是模糊的，要分層）：
 
-| 參數 | 模型 | 文獻 / 直覺依據 |
-|---|---|---|
-| `arrival_rate` λ | Poisson process，inter-arrival ~ Exp(1/λ) | 排隊論標準、Powers 2023 confirmed 真實 allocator workload |
-| `size_w_range` / `size_h_range` | 均勻分布 [min, max] | Hopper-Turton 1999 spirit（item 小於 bin） |
-| `lifetime_dist` | exponential / pareto / uniform | exponential 對照組；pareto α=1.5 真實重尾；uniform 控制組 |
-| `mean_lifetime` | distribution 平均值參數 | 直覺：短壽 + 高 arrival → Sliver；長壽 + 低 arrival → Boundary Lockout |
-| `n_items` | 整數 | 500–1000 通常足以讓 mode 反覆出現 |
-| `seed` | numpy.random Generator | reproducibility 必備 |
+| 比較對象 | 怎麼算 | 用途 |
+|---------|--------|------|
+| Offline clairvoyant optimal | 預知整段 arrival/departure，IP solver 求事後最佳 | 理論上界；只能對小實例（n ≤ ~50） |
+| 強 heuristic baseline | BLF / Shelf / FFDH 直接跑 | 實務 floor |
+| Prior RL baseline | Burcea 2014 / Wei 2011 / Powers 2023 | 直接競品 |
+| **Vanilla RL（無 mode feature）** | 同 agent 架構但拿掉 mode | **關鍵 ablation——賣點所在** |
 
-### 5 個 preset 的設定 + BLF 結果（n=200, seed=42, 50×50 bin）
+**核心原則**：賣點是「相對於 vanilla RL 的改善」，不是逼近 clairvoyant optimal。Optimal 只在小實例當天花板參照，告訴 reviewer 整體還有多少空間。
 
-| Preset | arrival_rate | size range | lifetime_dist | mean_lifetime | Peak PE | Peak 時間 | Discard 率 | 假設 mode |
-|---|---|---|---|---|---|---|---|---|
-| `light_departure` | 0.2 | (3, 15) | exponential | 100 | 74.0% | t=964 | 10.5% | Boundary Lockout |
-| `heavy_departure` | 1.0 | (3, 15) | exponential | 20 | 74.2% | t=53 | 9.0% | Sliver / Inland Island |
-| `mixed_lifetime` | 0.5 | (3, 15) | pareto α=1.5 | 30 | 68.0% | t=157 | 2.0% | Inland Island |
-| `small_items` | 0.8 | (2, 6) | exponential | 30 | 20.9% | t=144 | 0% | Staircase Skyline |
-| `large_items` | 0.3 | (10, 25) | exponential | 30 | 79.0% | t=93 | 46.5% | Inland Island（大洞） |
+### 方法論決策：RL 評估的多軸選擇（不只是收斂速度）
 
-**Peak occupancy（峰值占用率）= 整段模擬中 PE 最高的瞬間**——目前 demo 只存這張，未來要補時序 PE 曲線 + 多時間點 panel。
+mode-aware RL 的 inductive bias 設計，預期改善的不是 final PE 而是後幾軸：
 
-### 已踩的雷（lessons learned）
+| 評估軸 | 量化方式 | mode-aware 預期 |
+|--------|---------|----------------|
+| Final PE | 收斂後 PE | 不一定贏（vanilla 樣本夠多也可能學到隱式 mode） |
+| **Sample efficiency** | 達到 X% PE 所需 env steps | **大概率贏**——最自然的 inductive bias 賣點 |
+| **Generalization** | OOD workload（沒訓練過的分布）上的 PE | **可能贏**——mode signature 比 raw state 更 transfer |
+| **Robustness** | 跨 seed / 跨 workload 的 variance | **可能贏**——state 更 informative |
+| **Hard-case performance** | mode 集中出現的 instance 上的 PE | **應該贏**——inductive bias 設計目的 |
 
-1. **Peak snapshot bug（已修）**：Simulator 跑完所有事件後 bin 全空（所有 item 都離開），原本 demo 存 final state 全是空白圖。修法：新增 `peak_occupancy_snapshot()` helper + `render_grid()`（從 numpy snapshot 直接畫，不依賴 live bin）。教訓：**動態實驗不能存 "final" state，要存 "peak" 或 mid-run 快照**
+**故事設計**：4–5 行的 ablation 表，故事是「X 軸明顯贏、Y 軸打平、Z 軸略輸但代價合理」。不要單押 final PE，那是 vanilla RL 最容易追上的軸。
 
-2. **venv shebang lock-in（已修）**：把 `code/` 整個目錄移位後 `.venv/bin/pytest` 的 shebang 還指向舊絕對路徑，導致 spawn 失敗。修法：`rm -rf .venv && uv sync` 重建。教訓：venv 不可攜，移動專案後一定重建
+### 方法論決策：NP-hard 問題的參數設定處理（三層架構）
 
-3. **package import path**：用 `package = false` 的 uv 專案需要 `pyproject.toml` 設 `pythonpath = ["."]` 才能讓 pytest 找到套件；scripts 透過 `sys.path.insert(0, str(Path(__file__).parent.parent))` bootstrap
+問題的核心：不同參數 regime 下 BP 演算法行為完全不同，平均成一個數字會洗掉所有資訊。
 
-### PE（Packing Efficiency 裝填效率）定義與用法
+**Layer 1：用 benchmark instance family，不要自己亂生**
+
+| Benchmark | 特點 |
+|-----------|------|
+| Hopper-Turton (1999/2001) | 從已知 optimal 切出 instance，**OPT 已知** |
+| Berkey-Wang (1987) | 10 個 class，item size 分布不同 |
+| Martello-Vigo (1998) | 4 個 class，更刁鑽 |
+
+Dynamic 2D BP **沒有公認 benchmark**——要明確定義「改造 Hopper-Turton 變 dynamic 的方式」並公開，讓後人可複製。這是義務也是機會。
+
+**Layer 2：對制度參數做 factorial sweep**
+
+Dynamic BP 影響難度的關鍵參數：
+- Item size 分布（小 item vs 大 item 主導）
+- Aspect ratio 分布（正方形 vs 細長）
+- Lifetime 分布（短壽 vs 長壽、指數 vs heavy-tail）
+- Arrival rate / load factor（稀疏 vs 飽和）
+- Departure 是否預先知道（clairvoyant lifetime vs unknown）
+
+每個參數定 2–3 個 level，所有方法跑同一套 instance。產出「方法 × 參數設定」表格。
+
+**Layer 3：報告時做 stratification，不要平均後比**
+
+不同 regime 不同方法贏：
+- Light load → 都接近 OPT，比不出差異
+- Medium load → 演算法差異最明顯
+- Heavy load → 都崩，比誰崩得慢
+
+報告格式按 regime 切：
 
 ```
-PE = 已占用 cell 數 / bin 總 cell 數
+Load level    BLF    Shelf   Vanilla RL   Mode-aware RL
+Light (0.3)   0.95   0.96    0.97         0.97         ← 都差不多
+Medium (0.6)  0.78   0.82    0.85         0.89         ← 賣點在這
+Heavy (0.9)   0.55   0.62    0.61         0.71         ← 賣點更大
 ```
 
-**三種 PE 要分清楚**：
-- **Instantaneous PE 瞬時**：某時間點 t 的占用率（單一 snapshot 就是這個）
-- **Time-averaged PE 時間平均**：整段模擬的平均占用率
-- **Peak PE 峰值**：整段模擬中的最大瞬時 PE（目前 demo 圖就是這個）
+### 與 E 階段的連動
 
-**警示**：PE 不能單獨判定 heuristic 好壞——`large_items` 79% peak PE 看起來最高，但 discard 46.5%，其實是「能放的都放了、放不下的全丟」。**PE 必須跟 discard rate 一起看**。
+E 階段 failure mode taxonomy 正是 Layer 2/3 的前置工作：「在 (item-dist × lifetime-dist × load) 的哪個 regime，哪個 heuristic 出現哪個 failure mode」。Taxonomy 一旦建好，進階 6 的 RL 實驗就有現成 regime 切分依據——不是隨便切 light/medium/heavy，而是按發現的失敗模式切，比一般 RL 論文紮實。
 
-### 變體 E 不單獨用 PE 立論
-
-Deep-Pack 2019 / Hopper-Turton 1999 都用 final PE 比較 heuristic——這條路被占了。E 的 contribution 不在 PE 數字，而在 **mode signature + mitigation 對照表**。PE 只是基線統計值。
-
-### 資料來源
-
-- 文獻 PDF 在 `paper/`（已從 git 排除）：Coffman survey、Deep-Pack 2019
-- 待下載：Burcea 2014 thesis、Wei 2011 IJCAI、Powers 2023 ISMM、Christensen 2017 survey
+**E 階段量化（區別於進階 6）**：
+- E 量化 mode 的可辨識性 / 覆蓋率 / signature 一致性，**不是 beat baseline PE**
+- 進階 6 才回頭比 PE / fragmentation，且主軸是 mode-aware vs vanilla RL 的 ablation
 
 ---
 
