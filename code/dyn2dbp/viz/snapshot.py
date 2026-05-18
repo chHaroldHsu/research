@@ -12,13 +12,15 @@ glance instead of having to cross-reference an id legend.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Dict, Optional
 
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.patches import Rectangle
 
 from ..core.bin import BinState
+from ..core.item import Item
 
 
 def render_bin(
@@ -85,3 +87,90 @@ def render_bin(
     if title:
         ax.set_title(title)
     return ax
+
+
+def render_grid(
+    grid: np.ndarray,
+    title: Optional[str] = None,
+    ax: Optional[Axes] = None,
+    items_by_id: Optional[Dict[int, Item]] = None,
+    color_by: str = "lifetime",
+) -> Axes:
+    """Render a snapshot grid directly (no BinState needed).
+
+    Why this exists: the Simulator stashes grid snapshots after every event,
+    but the *live* BinState is empty at the end of a run (every item that
+    arrived also departed). To visualise peak occupancy or any mid-run state,
+    we need to render from a stored grid — and BinState's bookkeeping is
+    long gone by then.
+
+    Parameters
+    ----------
+    grid
+        2D int array as produced by ``BinState.snapshot()``. Cell value 0
+        means empty; any positive value is an item id.
+    title
+        Optional title above the panel.
+    ax
+        Optional matplotlib Axes to draw into.
+    items_by_id
+        Optional ``{item_id: Item}`` map. If provided and
+        ``color_by == "lifetime"``, cells are coloured by the item's
+        lifetime (matches ``render_bin`` semantics for variant E). If
+        omitted, falls back to id-based colouring.
+    color_by
+        ``"lifetime"`` (default) or ``"id"``.
+    """
+    if ax is None:
+        _, ax = plt.subplots(figsize=(6, 6))
+
+    H, W = grid.shape
+
+    # Build a float display matrix: empty cells → NaN (rendered white via
+    # the colormap's "bad" colour); non-empty cells → a value in [0, 1].
+    display = np.full(grid.shape, np.nan, dtype=float)
+
+    if color_by == "lifetime" and items_by_id:
+        max_lt = max(item.lifetime for item in items_by_id.values()) or 1
+        for cell_id, item in items_by_id.items():
+            display[grid == cell_id] = item.lifetime / max_lt
+    else:
+        # Categorical id colouring: ids mod 20 keeps adjacent items
+        # visually distinguishable without exhausting the palette.
+        mask = grid != 0
+        display[mask] = (grid[mask] % 20) / 20.0
+
+    cmap = plt.get_cmap("viridis").copy()
+    cmap.set_bad("white")
+    ax.imshow(
+        display,
+        origin="lower",          # y=0 at bottom — matches BLF / Position convention
+        cmap=cmap,
+        vmin=0.0, vmax=1.0,
+        extent=(0, W, 0, H),
+        interpolation="nearest",
+    )
+
+    ax.add_patch(Rectangle(
+        (0, 0), W, H,
+        fill=False, edgecolor="black", linewidth=1.5,
+    ))
+    ax.set_xlim(-1, W + 1)
+    ax.set_ylim(-1, H + 1)
+    ax.set_aspect("equal")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    if title:
+        ax.set_title(title)
+    return ax
+
+
+def peak_occupancy_snapshot(snapshots):
+    """Return (t, grid) of the highest-occupancy snapshot, or None if empty.
+
+    Convenience for demos / sanity checks. Picking peak occupancy gives the
+    most-loaded frame, which is where failure modes are easiest to spot.
+    """
+    if not snapshots:
+        return None
+    return max(snapshots, key=lambda s: np.count_nonzero(s[1]))

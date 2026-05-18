@@ -20,21 +20,66 @@
 
 ---
 
-## 當前進度
+## 當前進度（2026-05-18 更新）
 
-- **研究階段**：Special Topic 題目鎖定 + narrative 收斂至 E（2026-05-14），進入 baseline 實作
-- **Special Topic 題目**：Dynamic 2D Rectangle BP + abstract framing（不綁場域）+ **E 變體 failure mode taxonomy**
-- **本月目標**：1 個月內實作 E（taxonomy）+ 視覺化原型 + 報告；報告結尾明示往進階 6 / 8 延伸
+- **研究階段**：Special Topic narrative 鎖定（變體 E），**實作進入第 2 週**
+- **Special Topic 題目**：Dynamic 2D Rectangle BP + abstract framing + **E 變體 failure mode taxonomy**
+- **本月目標**：1 個月內實作 E + 視覺化原型 + 報告
 - **關鍵日期**：6/8 報告週前 8 成完成
 
-## 下次繼續
+### 4 週時程實況
 
-- **動手前快掃**（已部分完成 2026-05-14）：positioning scan 已產出 A/E 差異化評估與最接近 prior art 清單，**結果摘要見 `memory/literature-map.md` 已掃描清單**；要做的補強：找時間把 Burcea 2014、Wei 2011 IJCAI、Powers 2023 三篇細讀（確認他們確實沒做 taxonomy）
-- **第 1–2 週實作**：2D BLF + 合成 arrival/departure baseline（Hopper-Turton benchmark 改造），並準備 ≥ 3 個 heuristic（BLF / NFDH / FFDH / Shelf）共用 placement 介面，方便 E 階段做 heuristic × workload 系統掃描
-- **第 3 週**：跨 (heuristic × workload) 掃描，蒐集 bin 狀態時序快照，靠視覺 + 量化 metric 找出反覆出現的失敗形狀
-- **第 4 週**：命名 mode → 寫 signature → 寫 mitigation 對照表 → 寫報告（含結尾的進階 6 / 8 future work 段）
-- **延後決定**：碩論場域選擇（由進階 8 cross-domain scan 結果支撐）
-- **可選**：約楊老師 sanity check Special Topic 方向；將本日轉折寫進 `journal.md`
+| 週次 | 內容 | 狀態 |
+|---|---|---|
+| **第 1 週** | BLF baseline + Simulator + viz + tests | ✅ **完成**（5/14 開工，5/15 git push） |
+| **第 2 週** | Workload generator + metrics + animation | 🟡 **進行中**：generator ✅、5 presets ✅、bug fix ✅；metrics ❌、animation ❌、grid view ❌ |
+| 第 3 週 | NFDH/FFDH/Shelf + factorial 掃描 | ⏳ 未開始 |
+| 第 4 週 | 命名 mode + signature + mitigation 對照表 + 寫報告 | ⏳ 未開始 |
+
+### 第一個量化證據（BLF × 5 workload, n=200, seed=42）
+
+| Preset | Peak PE | Discard 率 |
+|---|---|---|
+| `light_departure` | 74.0% | 10.5% |
+| `heavy_departure` | 74.2% | 9.0% |
+| `mixed_lifetime` | 68.0% | 2.0% |
+| `small_items` | 20.9% | 0% |
+| `large_items` | 79.0% | **46.5%** |
+
+**意義**：同一個 BLF，5 種 workload 下 discard rate 從 0% 到 46.5%——**workload 確實大幅影響 heuristic 行為**，支持 5/14 鎖定的 H × W factorial design 假設。`heavy_departure` peak 圖已可肉眼觀察到 candidate Inland Island 雛形，但**尚未量化**。
+
+## 下次繼續（從另一設備接續時讀這段）
+
+### 立即下一步（第 2 週剩餘工作）
+
+1. **建 metrics 模組**（`code/dyn2dbp/metrics/`）——把眼睛看到的變成數字
+   - `pe.py`：time-series PE 曲線 + peak / mean / final 統計
+   - `discard.py`：discard rate 時序
+   - `fragmentation.py`：Tabero 周長平方積分（當對照組）
+2. **建 H × W grid view**（`code/dyn2dbp/viz/grid_view.py`）——5 個 preset peak snapshot 並排成 1 張圖；第 3 週命名 mode 的主要視覺工具
+3. **加 NFDH / FFDH / Shelf**（`code/dyn2dbp/heuristics/`）——湊齊 4 個 heuristic；第 3 週 factorial 前置
+
+### 第 3 週要做
+
+跨 (heuristic × workload) 系統掃描，蒐集 bin 狀態時序快照，靠視覺 + 量化 metric 找出反覆出現的失敗形狀。**fallback 檢核點**：若 ≥ 3 個 distinct mode 找不出來 → 觸發退回變體 A。
+
+### 第 4 週要做
+
+命名 mode → 寫 signature → 寫 mitigation 對照表 → 寫報告（含結尾的進階 6 / 8 future work 段）。
+
+### 平行 / 可選
+
+- **prior work 細讀**：Burcea 2014 / Wei 2011 IJCAI / Powers 2023 全文——確認他們確實沒做 taxonomy（mode 命名前要做）
+- 約楊老師 sanity check Special Topic 方向
+- 將近期轉折寫進 `journal.md`（位於 `for my self, don't revise/`）
+
+### 程式相關指令（在 `code/` 內執行）
+
+```bash
+cd code && uv sync                                    # 首次或換設備：安裝依賴
+cd code && uv run pytest                              # 31 tests 全綠
+cd code && uv run python scripts/demo_workload.py heavy_departure  # 跑 demo
+```
 
 ## 重要提醒
 

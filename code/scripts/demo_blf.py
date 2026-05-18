@@ -17,12 +17,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from dyn2dbp.core.bin import BinState
 from dyn2dbp.core.item import Item
 from dyn2dbp.core.simulator import Simulator
 from dyn2dbp.heuristics.blf import BLF
-from dyn2dbp.viz.snapshot import render_bin
+from dyn2dbp.viz.snapshot import peak_occupancy_snapshot, render_grid
 
 
 def main() -> None:
@@ -62,17 +63,27 @@ def main() -> None:
         flag = "OK " if e.success else "XX "
         print(f"  t={e.t:3d}  {flag}{e.event_type:9s} item#{e.item_id:<3d}{pos_str}  occ={e.occupancy_after:.2%}")
 
+    # End-of-run bin is empty (every item that arrives also departs), so
+    # render the peak-occupancy snapshot — that's where the bin is loaded.
     out_dir = Path(__file__).resolve().parent.parent / "figures"
     out_dir.mkdir(exist_ok=True)
+    items_by_id = {item.id: item for item in items}
+    peak = peak_occupancy_snapshot(result.snapshots)
+    if peak is None:
+        print("\nNo snapshots captured — skipping figure.")
+        return
+    peak_t, peak_grid = peak
+    peak_pe = np.count_nonzero(peak_grid) / (bin_state.W * bin_state.H)
     fig, ax = plt.subplots(figsize=(7, 7))
-    render_bin(
-        bin_state,
-        title=f"BLF demo — final state (PE={result.final_occupancy:.2%})",
+    render_grid(
+        peak_grid,
+        title=f"BLF demo — peak state at t={peak_t} (PE={peak_pe:.2%})",
         ax=ax,
+        items_by_id=items_by_id,
     )
-    out_path = out_dir / "demo_blf_final.png"
+    out_path = out_dir / "demo_blf_peak.png"
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
-    print(f"\nSaved snapshot: {out_path}")
+    print(f"\nSaved peak snapshot (t={peak_t}, PE={peak_pe:.2%}): {out_path}")
 
 
 if __name__ == "__main__":
