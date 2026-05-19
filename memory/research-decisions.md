@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-05-18
+
+### Heuristic 集從 {BLF, NFDH, FFDH, Shelf} 改為 {BLF, NFS, FFS, BFS}
+
+**動機**：NFDH / FFDH 名字裡的 "DH"（Decreasing Height）需要先把所有 item 按高度遞減排序，這是**offline** 假設——在 dynamic online + departure 設定下做不到（不知道未來 item）。本研究刻意鎖 online（item 一個個來、來了就要放、不能 buffer），所以 textbook NFDH/FFDH 不適用。
+
+**新集合（皆 online shelf 家族）**：
+- **NFS**（Next-Fit Shelf）：只看當前最近開啟的 shelf；不夠就開新的
+- **FFS**（First-Fit Shelf）：依開啟順序掃所有 shelf，第一個塞得下就用
+- **BFS**（Best-Fit Shelf）：所有能放的 shelf 中選「剩餘高度最小」者
+
+**Shelf 語意（textbook 純粹版）**：x-cursor **只前進不回退**——shelf 內 item departure 留下的 cell 不可重用。這正是要觀察的失敗模式（候選 "Departed-item Ghost" / Top-Shelf Waste），不是 bug。
+
+**未取 NFDH/FFDH 作 offline upper bound 對照**：實作 + 解讀成本上升；narrative 也會被「online vs offline 差距」分散注意力。若第 3 週發現需要量化「online 損失多少」，再考慮加。
+
+**為何 4 個夠不另加 Skyline**：BLF 已是無 shelf 結構的代表，BFS 與 FFS 形成「best vs first」對照組，4 個已涵蓋「無結構 / 順序開啟 / 緊湊匹配」三軸。Skyline 與 BLF 重疊度高，先省下。
+
+---
+
 ## 2026-05-14
 
 ### Narrative 收斂：選 E 變體（failure mode taxonomy 失敗模式分類學）
@@ -28,7 +47,7 @@
 
 ### 一個月實作 schedule
 
-- 第 1–2 週：BLF baseline + 合成 arrival/departure workload generator，且共用 placement 介面以便接 NFDH/FFDH/Shelf
+- 第 1–2 週：BLF baseline + 合成 arrival/departure workload generator，且共用 placement 介面以便接 NFS/FFS/BFS（見 2026-05-18 段，原 NFDH/FFDH 改為 online shelf 家族）
 - 第 3 週：跨 (heuristic × workload) 系統掃描，採集 bin 狀態時序快照
 - 第 4 週：命名 mode + signature + mitigation 對照表 → 報告 8 成完成（含進階 6 / 8 future work 段）
 
@@ -51,7 +70,7 @@
 **問題意識**：「不管哪個 heuristic 都會留洞，洞形狀取決於進出時間」——單看一個 heuristic 不能歸因，會被 workload 當 confounding variable（混淆變數）。
 
 **解法**：第 3 週掃描**必須是 H × W 網格**：
-- H = {BLF, NFDH, FFDH, Shelf}（4 個 heuristic）
+- H = {BLF, NFS, FFS, BFS}（4 個 heuristic，皆為 online；見 2026-05-18 段）
 - W = {至少 3–5 個 workload，覆蓋 light/heavy departure、不同 size distribution 大小分布、不同 lifetime distribution 壽命分布}
 - 每格紀錄 PE（裝填效率）+ bin 狀態時序快照 + 出現的 mode
 
@@ -129,7 +148,7 @@ H × W 因子設計本身就是 prior work 沒做的：Tabero / Powers 只看 ag
 ### Special Topic 報告 bar 釐清（同日傍晚對話）
 
 **設定的 bar**：不解決問題，但結尾必須立得起 next optimization target——能講出「現有方法已優化到 X、我觀察到的 gap 是 Y、下一步可從 Z 切入」。
-- **不接受的下限**：報告結尾只能講「我觀察到 BLF 退化得比 FFDH 嚴重」這類純比較——口試委員問「so what / 你怎麼知道別人沒做過」會答不上來
+- **不接受的下限**：報告結尾只能講「我觀察到 BLF 退化得比 FFS 嚴重」這類純比較——口試委員問「so what / 你怎麼知道別人沒做過」會答不上來
 - **要做的支撐**：上方 positioning scan 是讓這句話有底氣的前置（沒這個定位，next-step claim 立不起）
 - **對 narrative 選擇的隱含影響**：E 變體（failure mode taxonomy）比 A 原版（heuristic 退化比較）更自然對位此 bar——taxonomy 本身即 optimization target 選單，每個命名的 mode 對應一個下一步可 attack 的方向。但仍依 5/31 實作結果決定，不提前鎖死
 - **報告結構草案**（5 段）：(1) Lit positioning 別人優化過什麼；(2) Gap 那些優化沒處理什麼；(3) Baseline 實作落入那個 case；(4) Observation 視覺化 + 量化 reveal 失敗結構；(5) Next-step claim「碩論將針對 [模式 X] 設計 [類型 Y] 改良」

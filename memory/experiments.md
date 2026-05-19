@@ -5,6 +5,57 @@
 
 ---
 
+## 2026-05-18（晚）— 第一張 4×5 factorial sweep 出爐
+
+`scripts/demo_grid_view.py` 從 1×5（BLF only）擴成 **4×5（BLF / NFS / FFS / BFS × 5 preset）**，僅改 2 行 import + heuristics list；圖存於 `code/figures/grid_view_seed42.png`。第 3 週的主交付物原型已產出，比預期早一週。
+
+### 量化表（n=200, seed=42, bin=50×50）
+
+```
+              light_dep  heavy_dep  mixed   small   large
+BLF  peak PE    74%        74%       68%    21%    79%
+     discard    10%         9%        2%     0%    46%
+NFS  peak PE    24%        24%       27%    19%    29%
+     discard    88%        88%       88%    57%    96%
+FFS  peak PE    35%        35%       31%    19%    34%
+     discard    84%        84%       84%    31%    96%
+BFS  peak PE    35%        35%       31%    19%    34%
+     discard    85%        85%       85%    31%    96%
+```
+
+### 視覺對比（一眼可見的 mode 形狀）
+
+- **BLF**：brick-wall（磚塊咬合）
+- **NFS / FFS / BFS**：horizontal stripe（水平條紋）——shelf 家族通用 mode 形狀，與 BLF 截然不同
+- BLF 在 packing density 全面領先 shelf 家族 30+ pp peak PE，但 shelf 家族在 small_items 上 PE 落差縮到 ~2 pp（19% vs 21%）——shelf 家族對 small_items 沒那麼吃虧
+
+### Mode 命名候選（從 4×5 圖直接讀出來）
+
+| 候選 mode | 出現位置 | 視覺特徵 |
+|---|---|---|
+| Brick-wall packing | BLF 行通用 | 磚塊互咬，少縫 |
+| Horizontal stripe / shelf-locked | NFS/FFS/BFS 行通用 | 整齊水平條 + 大量空條 |
+| Inland Island | BLF × heavy_departure | 中央留 item 被早到者包圍 |
+| Top sliver | BLF × large_items | 上方水平條狀空白 |
+| Shelf abandonment | NFS 全行 | 已關閉 shelf 上的廢棄空隙 |
+| Item-too-tall failure | NFS/FFS/BFS × large_items | shelf 撐不下，幾乎全 discard |
+
+### 待追證據（不要鎖死當結論）
+
+- **FFS ≈ BFS 重合**：peak PE 完全相同、discard 只差 1 pp、視覺幾乎一致。當前 seed=42、n=200、bin=50×50 下 best-fit 與 first-fit 退化到同支
+  - 可能原因：bin/item 比小 → 候選 shelf 少 → 兩個 selection rule 常選到同一個。需 seed sweep（≥ 10 seeds）+ bin 大小掃描驗證是真的重合還是 seed-specific artefact
+- **mean/peak PE ratio** 第三個 mode signature 候選元件還沒套到 4×5（只在 BLF × 5 算過）
+- **fragmentation metric**（周長² shape factor）已實作但**還沒套到 sweep**——下一步可加進 annotation 變第三個數字，量化 sliver 強度
+
+### 第 3 週剩餘工作（相對原計畫）
+
+- ✅ 4×5 factorial 原型（提前完成）
+- ⏳ seed sweep（≥ 10 seeds）確認 FFS ≈ BFS 是否穩定
+- ⏳ fragmentation metric 套到 sweep
+- ⏳ 蒐集 bin 狀態時序快照（非 peak only），準備第 4 週命名 mode
+
+---
+
 ## 2026-05-18
 
 ### 方法論決策：RL 評估的兩層架構

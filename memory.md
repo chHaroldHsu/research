@@ -6,7 +6,7 @@
 
 ## 題目定義（2026-05-12 鎖定，2026-05-14 narrative 收斂至 E）
 
-**Dynamic 2D Rectangle Bin Packing**：把為 static 設計的 2D placement 啟發式（BLF / NFDH / FFDH / Shelf-based）放到有 arrival + departure 的 dynamic 環境下跑，觀察它們的**退化行為與失敗模式**。
+**Dynamic 2D Rectangle Bin Packing**：把為 static 設計的 2D placement 啟發式（BLF / NFS / FFS / BFS）放到有 arrival + departure 的 dynamic 環境下跑，觀察它們的**退化行為與失敗模式**。
 
 - **Framing**：abstract（不綁特定場域；用 Hopper-Turton / Berkey-Wang benchmark + 合成 arrival/departure）
 - **Narrative（2026-05-14 收斂）**：**E 變體 — failure mode taxonomy 失敗模式分類學**
@@ -20,9 +20,9 @@
 
 ---
 
-## 當前進度（2026-05-18 更新）
+## 當前進度（2026-05-18 晚更新）
 
-- **研究階段**：Special Topic narrative 鎖定（變體 E），**實作進入第 2 週**
+- **研究階段**：Special Topic narrative 鎖定（變體 E），**第 3 週原型提前完成**
 - **Special Topic 題目**：Dynamic 2D Rectangle BP + abstract framing + **E 變體 failure mode taxonomy**
 - **本月目標**：1 個月內實作 E + 視覺化原型 + 報告
 - **關鍵日期**：6/8 報告週前 8 成完成
@@ -32,45 +32,57 @@
 | 週次 | 內容 | 狀態 |
 |---|---|---|
 | **第 1 週** | BLF baseline + Simulator + viz + tests | ✅ **完成**（5/14 開工，5/15 git push） |
-| **第 2 週** | Workload generator + metrics + animation | 🟡 **進行中**：generator ✅、5 presets ✅、bug fix ✅；**metrics 進行中**（types ✅、pe ✅、discard ❌、fragmentation ❌、`__init__` ❌）、animation ❌、grid view ❌ |
-| 第 3 週 | NFDH/FFDH/Shelf + factorial 掃描 | ⏳ 未開始 |
-| 第 4 週 | 命名 mode + signature + mitigation 對照表 + 寫報告 | ⏳ 未開始 |
+| **第 2 週** | Workload generator + metrics + animation | ✅ generator + 5 presets + 3 metrics + grid view；animation 暫略 |
+| **第 3 週** | NFS/FFS/BFS + factorial 掃描 | 🟢 **原型已出**（4 heuristic 全實作，4×5 grid 跑通；剩 seed sweep / fragmentation 套用） |
+| 第 4 週 | 命名 mode + signature + mitigation 對照表 + 寫報告 | ⏳ 未開始（候選 mode 已從 4×5 圖讀出 6 個，見下） |
 
-### 第一個量化證據（BLF × 5 workload, n=200, seed=42）
+### 第一個 4×5 factorial 證據（n=200, seed=42, bin=50×50）
 
-| Preset | Peak PE | Discard 率 |
-|---|---|---|
-| `light_departure` | 74.0% | 10.5% |
-| `heavy_departure` | 74.2% | 9.0% |
-| `mixed_lifetime` | 68.0% | 2.0% |
-| `small_items` | 20.9% | 0% |
-| `large_items` | 79.0% | **46.5%** |
+```
+              light_dep  heavy_dep  mixed   small   large
+BLF  peak PE    74%        74%       68%    21%    79%
+     discard    10%         9%        2%     0%    46%
+NFS  peak PE    24%        24%       27%    19%    29%
+     discard    88%        88%       88%    57%    96%
+FFS  peak PE    35%        35%       31%    19%    34%
+     discard    84%        84%       84%    31%    96%
+BFS  peak PE    35%        35%       31%    19%    34%
+     discard    85%        85%       85%    31%    96%
+```
 
-**意義**：同一個 BLF，5 種 workload 下 discard rate 從 0% 到 46.5%——**workload 確實大幅影響 heuristic 行為**，支持 5/14 鎖定的 H × W factorial design 假設。`heavy_departure` peak 圖已可肉眼觀察到 candidate Inland Island 雛形，但**尚未量化**。
+詳見 `code/figures/grid_view_seed42.png` 與 `memory/experiments.md` 2026-05-18（晚）段。
+
+### Mode 命名候選（6 個，從 4×5 圖直接讀出）
+
+1. **Brick-wall packing**（BLF 行通用）
+2. **Horizontal stripe / shelf-locked**（NFS/FFS/BFS 行通用）
+3. **Inland Island**（BLF × heavy_departure）
+4. **Top sliver**（BLF × large_items）
+5. **Shelf abandonment**（NFS 全行）
+6. **Item-too-tall failure**（NFS/FFS/BFS × large_items）
+
+第 4 週 fallback 檢核點「≥ 3 個 distinct mode」已遠超門檻，**不需退回變體 A**。
+
+### 待追證據（不要當結論）
+
+- **FFS ≈ BFS 重合**：當前 seed/n/bin 下兩者數值與視覺幾乎一致；需 seed sweep（≥10 seeds）+ bin 大小掃描，確認是真重合還是 artefact
+- **mean/peak PE ratio** 第三個 signature 元件還沒套到 4×5
+- **fragmentation metric** 已實作但還沒套到 sweep annotation
 
 ## 下次繼續（從另一設備接續時讀這段）
 
 - **實驗設計查表**：2026-05-18 已把 RL 評估兩層架構（訓練 vs 評估、optimal 分層）、多軸選擇（sample efficiency / generalization / robustness / hard-case，不單押 final PE）、NP-hard 參數設定三層架構（benchmark family / factorial sweep / regime stratification）整理進 `memory/experiments.md`。進階 6 設計 RL 實驗前直接查表
 
-### 立即下一步（第 2 週剩餘工作）
+### 立即下一步（第 3 週收尾 / 第 4 週啟動）
 
-1. **建 metrics 模組**（`code/dyn2dbp/metrics/`）——把眼睛看到的變成數字
-   - ✅ `types.py`：frozen dataclass `TimeSeries` / `PEStats` / `DiscardStats` / `FragStats`（含 shape 驗證）
-   - ✅ `pe.py` + `tests/test_pe.py`：`pe_series` / `pe_stats`（time-weighted mean，排除 failed arrivals）；5 tests 全綠（全 suite 36 tests）
-     - 已用 5 preset sweep 驗證 peak / discard% 與 5/15 量化證據完美對齊；新觀察 mean/peak ratio：mixed=0.41（最低，短壽命快進快出）、large=0.59（最高，大 item 卡得久），可能是 mode signature 候選元件
-   - ❌ `discard.py`：cumulative + windowed discard rate 時序
-   - ❌ `fragmentation.py`：Tabero 周長平方積分（當對照組）
-   - ❌ `__init__.py`：re-export 公開 API
-2. **建 H × W grid view**（`code/dyn2dbp/viz/grid_view.py`）——5 個 preset peak snapshot 並排成 1 張圖；第 3 週命名 mode 的主要視覺工具
-3. **加 NFDH / FFDH / Shelf**（`code/dyn2dbp/heuristics/`）——湊齊 4 個 heuristic；第 3 週 factorial 前置
-
-### 第 3 週要做
-
-跨 (heuristic × workload) 系統掃描，蒐集 bin 狀態時序快照，靠視覺 + 量化 metric 找出反覆出現的失敗形狀。**fallback 檢核點**：若 ≥ 3 個 distinct mode 找不出來 → 觸發退回變體 A。
+1. **seed sweep** 驗證 FFS ≈ BFS 是否穩定（≥10 seeds，相同 n / bin），同時看其他 cell 的 seed-to-seed variance；若 FFS=BFS 跨 seed 穩定，當作觀察寫進報告；若 seed-specific，找分歧 seed 寫進報告當「兩者並非總是等價」的反例
+2. **fragmentation metric 套到 4×5 annotation**——把 grid view annotation 從 2 個數字（peak PE / discard）擴成 3 個（+ peak-time F），量化 sliver 強度；BLF × large_items 應該明顯高
+3. **mean/peak PE ratio 補做完整 4×5**——目前只有 BLF 那列算過，看 shelf 家族 ratio 是否也呈規律
+4. **時序快照採集**（非 peak only）：第 4 週命名 mode 前需要看到 mode 如何成形/消解，不能只看 peak frame；snapshot 已存 `result.snapshots`，需設計 sampling 策略
 
 ### 第 4 週要做
 
-命名 mode → 寫 signature → 寫 mitigation 對照表 → 寫報告（含結尾的進階 6 / 8 future work 段）。
+命名 mode → 寫 signature（用 PE ratio + fragmentation + 視覺特徵組合）→ 寫 mitigation 對照表 → 寫報告（含結尾的進階 6 / 8 future work 段）。**fallback 已 clear**：6 個 mode 候選 >> 3 個門檻。
 
 ### 平行 / 可選
 
@@ -82,8 +94,9 @@
 
 ```bash
 cd code && uv sync                                    # 首次或換設備：安裝依賴
-cd code && uv run pytest                              # 31 tests 全綠
-cd code && uv run python scripts/demo_workload.py heavy_departure  # 跑 demo
+cd code && uv run pytest                              # 75 tests 全綠
+cd code && uv run python scripts/demo_workload.py heavy_departure  # 單 workload demo
+cd code && uv run python scripts/demo_grid_view.py    # 4×5 factorial sweep → figures/grid_view_seed42.png
 ```
 
 ## 重要提醒

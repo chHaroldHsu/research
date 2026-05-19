@@ -67,7 +67,7 @@ research/
     ├── .gitignore                   # code 專屬 ignore（venv / __pycache__ / 產出物）
     ├── dyn2dbp/                     # 主套件
     │   ├── core/                    # Item / BinState / Simulator
-    │   ├── heuristics/              # PlacementStrategy ABC + BLF / NFDH / FFDH / Shelf
+    │   ├── heuristics/              # PlacementStrategy ABC + BLF / NFS / FFS / BFS
     │   ├── workloads/               # 合成 arrival/departure workload generator
     │   ├── metrics/                 # PE、fragmentation metric、mode signature
     │   ├── viz/                     # snapshot、animation、H×W 網格視覺化
