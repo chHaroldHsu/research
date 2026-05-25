@@ -4,29 +4,59 @@ For tokens efficiency, if you have to think heavily / process disposable content
 
 ---
 
-## 對話啟動程序
+## Memory Protocol（指令；對話啟動與寫入規則）
 
-**每次對話開始前，必須先讀取 `memory.md`**，掌握跨對話的進度、下次繼續的地方、重要提醒。需要更細節時，再依索引讀取 `memory/` 內對應分類檔案。
+```yaml
+on_conversation_start:
+  read_first: memory.md             # 索引 + 題目定義 + 下次繼續 + 重要提醒（≤50 行）
+  read_on_demand:                   # 按需展開，不要預先全讀
+    decision_or_rationale: memory/research-decisions.md
+    measurement_or_result: memory/experiments.md
+    milestone_or_blocker:  memory/progress.md
+    future_extension:      memory/ideas.md
+    literature:            memory/literature-map.md
+    archived_topic_eval:   memory/candidate-topics.md
+    unsorted_stash:        memory/inbox.md
 
-寫入記憶時：在 `memory/` 對應分類檔案最上方新增 `## YYYY-MM-DD` 段落，最新日期置頂；必要時同步更新 `memory.md` 的「當前進度」「下次繼續」「重要提醒」。
+on_write:
+  rule: single_source_of_truth          # 永不雙寫；資料只在 detail 檔出現一次
+  classify_then_append:
+    decision_or_rationale: memory/research-decisions.md   # 為什麼選 X、放棄什麼
+    measurement_or_result: memory/experiments.md          # 跑了 X 得到 Y、踩雷
+    milestone_or_blocker:  memory/progress.md             # 完成什麼、卡在哪
+    future_extension:      memory/ideas.md                # 尚未做的延伸
+    unclear:               memory/inbox.md                # consolidation 時 drain
+  section_header: "## YYYY-MM-DD（可選 topic-tag）"        # 最新置頂
+  cross_link: "→ exp YYYY-MM-DD" / "→ decisions YYYY-MM-DD"  # 禁止複製表格、數字
+  update_memory_md_only_when: 「題目定義」「下次繼續」「重要提醒」實質變動
+  date_format: ISO YYYY-MM-DD；相對日期一律轉絕對
 
----
+on_supersede:
+  trigger: 新事實使舊條目過期（含「假設→已驗證」轉變）
+  action: 舊條目上方插入 marker，**不刪**；保留思考軌跡
+  marker_format: |
+    > SUPERSEDED YYYY-MM-DD：<原因一句話> → see <檔案>#<新日期>
 
-## 當前進度
+hypothesis_vs_result:
+  rule: 候選命名、預期 mode、未驗證 mapping 一律標 [假設]；驗證後改 [已驗證 YYYY-MM-DD]
+  reason: E 變體的貢獻正是把假設變證據；混淆會誤判 prior art 與自己貢獻
 
-> 此章節最常更新，反映研究的即時狀態。
+consolidation:
+  trigger: 使用者輸入「做一次 memory consolidation」／週末／sprint 邊界
+  steps:
+    - dedup:         跨檔重複片段，保留 detail 檔版本，其他改 link
+    - mark_supersede: 過期條目加 marker（不刪）
+    - drain_inbox:   inbox.md 條目分類進對應檔
+    - refresh_index: 更新 memory.md 的「下次繼續」「題目定義」「重要提醒」
+    - archive:       條目 ≥30 天未動 AND 已 superseded → memory/archive/YYYY-Qn.md
 
-**研究階段**：題目已鎖定，進入 positioning scan + baseline 實作
+language:
+  research_content: 中文（與 user 對齊）
+  scratch_thinking: 英文（debugging / code review / 一次性分析，省 token）
 
-**當前聚焦方向**：Dynamic 2D Rectangle BP（abstract framing），先做 positioning scan 釐清現有方法邊界，再進入 baseline 實作
-
-**To-dos**：
-- [x] **本週選題**（5/10 前）：**已鎖定** Dynamic 2D Rectangle BP + abstract framing（不綁特定場域），narrative（A 原版 vs E 變體）5/31 前決定。詳見 `memory.md` 題目定義段
-- [ ] **2–3 天 positioning scan**：先讀 `memory/literature-map.md` 列的 3 篇 survey（Christensen 2017 / Lodi 2002 / Coffman 2013），再依關鍵字延伸；回答「別人優化過什麼 / 邊界在哪 / 我的觀察落在哪個邊界外」
-- [ ] **第 1–2 週**：2D BLF baseline + 合成 arrival/departure workload generator（Hopper-Turton benchmark 改造）
-- [ ] **5/31 前**：根據實作結果決定 narrative（A 原版 = heuristic 退化比較 / E 變體 = failure mode taxonomy）
-- [ ] **6 月前**產出視覺化原型（即使只是 baseline 跑得出來、能畫出結果的版本）
-- [ ] **6/8 報告週前**完成 8 成報告內容（題目動機、baseline、初步結果、視覺化 demo），結尾立得起 next-step claim
+current_focus_pointer:                  # 取代舊「當前進度」段；source of truth 在 memory.md
+  see: memory.md → 「題目定義」「下次繼續」
+```
 
 ---
 
@@ -42,19 +72,20 @@ For tokens efficiency, if you have to think heavily / process disposable content
 
 ## 目錄結構與各檔案角色
 
-```
 research/
 ├── CLAUDE.md          # 本文件，提供 Claude 專案背景與當前進度
-├── memory.md          # 跨對話記憶索引：當前進度、下次繼續、重要提醒（對話開始必讀）
+├── memory.md          # 跨對話記憶索引：題目定義、下次繼續、重要提醒（對話啟動必讀，≤50 行）
 ├── journal.md         # 研究日誌：焦點演變、想法迭代、放棄的方向
 ├── meeting-notes.md   # 與指導教授的會議紀錄
-├── memory/                          # 研究筆記層
-│   ├── research-decisions.md        # 研究方向決策、放棄的方向、選題理由
-│   ├── progress.md                  # 階段性進展、里程碑、卡關狀況
-│   ├── ideas.md                     # 研究點子、跨領域聯想、零散發想
-│   ├── candidate-topics.md          # Bin-Packing 候選題目完整分析
-│   ├── literature-map.md            # 文獻掃描中心：方法家族、關鍵字、survey 入口、H1–H5 假設驅動操作指引
-│   └── experiments.md               # 實作過程、踩過的雷、baseline 結果、資料來源
+├── memory/                          # 研究筆記層（detail 檔；按需展開）
+│   ├── research-decisions.md        # 研究方向／實驗設定／方法論決策（**為什麼選 X**）
+│   ├── experiments.md               # 跑了 X 得到 Y（資料、表格、踩雷）
+│   ├── progress.md                  # 里程碑、卡關、週時程實況
+│   ├── ideas.md                     # 未來延伸方向、跨領域聯想
+│   ├── candidate-topics.md          # 候選題目完整分析（archive 性質）
+│   ├── literature-map.md            # 文獻掃描中心：方法家族、survey、H1–H5 操作指引
+│   ├── inbox.md                     # 未分類暫存，consolidation 時 drain
+│   └── archive/                     # 季 archive（≥30 天未動 AND 已 superseded 的條目）
 ├── context/                         # 研究背景層
 │   ├── advisor.md                   # 指導教授研究背景、學生論文方向、方法論特徵
 │   ├── department.md                # 系所定位、三大專業領域、論文題目隱含要求

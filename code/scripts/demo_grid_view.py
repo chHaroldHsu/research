@@ -21,14 +21,24 @@ import numpy as np
 from dyn2dbp.core.bin import BinState
 from dyn2dbp.core.simulator import Simulator
 from dyn2dbp.heuristics import BFS, BLF, FFS, NFS
-from dyn2dbp.metrics import discard_stats, pe_stats
+from dyn2dbp.metrics import discard_stats, fragmentation, pe_stats
 from dyn2dbp.viz.grid_view import PanelData, render_h_by_w_grid
 from dyn2dbp.viz.snapshot import peak_occupancy_snapshot
 from dyn2dbp.workloads.presets import PRESETS
 
 
 def run_cell(strategy_cls, workload_factory, *, n_items, seed, bin_W, bin_H):
-    """Run one (heuristic, workload) cell and pack it into a PanelData."""
+    """Run one (heuristic, workload) cell and pack it into a PanelData.
+
+    Annotation carries the three mode-signature components:
+      * peak PE        — densest packing achieved
+      * discard rate   — overall arrival drop fraction
+      * F@peak         — fragmentation shape factor on the peak-occupancy
+                         snapshot (the very grid we're visualising), so the
+                         number lines up 1:1 with what the reader sees
+      * mean/peak      — time-weighted mean PE divided by peak PE; low ratio
+                         means the bin is dense only briefly
+    """
     bin_state = BinState(W=bin_W, H=bin_H)
     sim = Simulator(bin_state, strategy_cls())
     items = workload_factory(n_items=n_items, seed=seed).generate()
@@ -41,8 +51,11 @@ def run_cell(strategy_cls, workload_factory, *, n_items, seed, bin_W, bin_H):
 
     pe = pe_stats(result)
     disc = discard_stats(result)
+    f_peak = fragmentation(peak_grid)
+    ratio = (pe.mean / pe.peak) if pe.peak > 0 else 0.0
     annotation = (
-        f"t={peak_t}  peak PE={pe.peak:.0%}  discard={disc.rate_overall:.0%}"
+        f"t={peak_t}  peak PE={pe.peak:.0%}  discard={disc.rate_overall:.0%}\n"
+        f"F@peak={f_peak:.1f}  mean/peak={ratio:.2f}"
     )
     return PanelData(
         grid=peak_grid,

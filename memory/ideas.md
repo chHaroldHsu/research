@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-05-23
+
+### 從前置 #2–#5 副產物冒出的延伸方向
+
+由 30-seed sweep + cluster 分析（→ exp 2026-05-23）冒出 3 個非當前報告主軸、但值得未來追的方向：
+
+**時序 signature（補回 peak 丟掉的時間維度）**
+- 發現 light_dep 與 heavy_dep 在 peak signature 上等價（d/σ ≤ 0.16，跨所有 heuristic）→ peak 信號完全丟掉了 departure rate 差異
+- 補回時間維度的候選 metric：turnover rate at peak（peak 時刻的進出 item 速率）、time-to-peak（首次達到 peak PE 的 tick）、peak duration（PE 停在 ≥ 95% peak 的時長）
+- 這些 metric 應該能區分 light vs heavy。如果區分得出來，signature 從 2D 擴成 4D（peak_pe / discard / turnover / duration），mode taxonomy 可能新增 transient-only mode
+- 對進階 6（RL feature）相當友善：時序 metric 本來就是 state 的一部分
+
+**FFS ≡ BFS 在當前參數區的條件**
+- 4 個 metric 全部成立的等價需要可解釋的原因。猜想：bin/item size 比較小 → shelf 候選數少 → first-fit 與 best-fit 常選到同一個
+- 未來可掃 bin/item 比，找出 FFS 與 BFS 開始分離的 threshold
+- 對碩論：bin 大小 sensitivity sweep 是必做（5/19 已 flag），這個 finding 是它的子目標
+
+**Grid topology signature（救回 Inland Island）**
+- 當前 Inland Island 退場是因為 (peak_pe, discard, mean/peak) 三維 signature 抓不出「中央 trapped voids」
+- 救法：對 peak grid 做 connected-component 分析，分離 boundary void（接觸 bin 邊界）vs interior void（被 item 包圍）。interior void count / total void area ratio 可能是 Inland Island 的有效 detector
+- 風險：要寫額外 topology code，且 mode 是否真存在還是要視覺確認。當前報告先不做，留作碩論細化的選項
+
+---
+
 ## 2026-05-14
 
 ### 變體 E（failure mode taxonomy 失敗模式分類學）的未來延伸方向

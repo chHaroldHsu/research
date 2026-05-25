@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-05-23
+
+### 第 4 週前置 #2–#5 一次跑完（30-seed sweep）
+
+5/22 對話釐清「現在 model 真能說 workload 量化得出 fragmentation pattern 嗎」→ 列出 4 項前置（後加上 #1 prior work 共 5 項）。今天把 #2–#5 一次跑完：seeds 拉到 30 = 600 runs，產出 30 張 grid_view + signature 2D scatter + PCA + cluster stats。詳數據 → experiments 2026-05-23。
+
+**主要成果**：
+
+- 6 個量化 mode 在 30-seed 重複下穩定（≥ 60% dominant，多數 100%）：Brick-wall、Horizontal-stripe、Top-sliver、Sparse-BLF、Item-too-tall、Sparse-stripe
+- **2 個原始候選退場**：Inland Island（signature 重疊、視覺無區別）、Shelf abandonment（NFS 與 FFS/BFS 同 mode 標籤）
+- Signature 改為 **2D（peak PE + discard）+ mean/peak 輔助**，F@peak 完全降級（σ 對 BLF 翻倍 seed-dependent）
+- E 變體貢獻邊界釐清：**Brick-wall / Horizontal-stripe 是 heuristic-family baseline；研究貢獻在 4 個 workload-induced mode**
+
+**意外發現**：
+
+- light_dep 與 heavy_dep 在 peak signature 上等價（d/σ ≤ 0.16）→ 兩個 preset 等同名字不同的同一 workload，時序維度才能分
+- FFS ≡ BFS 在 4 個 metric 全部成立 → 報告可省一個 heuristic
+- PCA 確認 signature space 本質低維（前 2 維 92% 變異）
+
+**剩下卡關**：
+
+- 第 4 週剩 #1 prior work（命名 mode 前必須）；楊老師 sanity check 仍未約
+- Mode 數量 6 個 > 3 門檻，fallback 安全
+- Oracle Gap 計算可開始：cluster 分群清楚 → mode-aware oracle 有明確選法
+
+---
+
+## 2026-05-19
+
+### 第 3 週收尾完成（4 件一次跑完）
+
+1. Seed sweep：`scripts/seed_sweep.py`，4 heuristic × 5 preset × 10 seeds = 200 runs。CSV 在 `code/figures/seed_sweep_raw.csv`
+2. Fragmentation F + mean/peak ratio：4×5 grid_view annotation 從 2 數字擴成 4 數字（peak PE / discard / F@peak / mean/peak）
+3. 時序快照 sampling：`viz/snapshot.py::sample_snapshots()` + `scripts/demo_timeseries.py`
+4. 75/75 tests pass
+
+**關鍵成果**：FFS ≈ BFS 跨 10 seed Δ ≪ σ → 報告可下「等價」結論。Mode signature 雛形：BLF F@peak 3–6，shelf 家族 F@peak 7–11，shelf 大物失敗時 mean/peak < 0.2。詳數據 → experiments 2026-05-19。
+
+### 卡關 / 待決
+
+- 第 4 週進前必須讀完 Burcea 2014 / Wei 2011 / Powers 2023（避免重命名 prior work mode）
+- 楊老師 sanity check 仍未約
+
+---
+
 ## 2026-05-18
 
 ### 第 1 週 deliverable 完成（5/14 開工，5/15 git push）

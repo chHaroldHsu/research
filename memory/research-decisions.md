@@ -5,7 +5,187 @@
 
 ---
 
+## 2026-05-22
+
+### 方法論決策：E variant 的 ground truth 三層驗證架構
+
+對話釐清「我的 ground truth 是什麼？比較對象是誰？」核心結論：**E variant 是 descriptive science，沒有 single ground truth；要靠三層 validity 遞進驗證**。常見的「找一個 baseline 對打」思維不適用——那是 prescriptive 階段才有的問題。
+
+三層 validity 遞進：
+
+- **階段 1（現在做的）descriptive**：GT = mode 在 signature 空間可區分 + 覆蓋完整。當前 narrative 對應 4×5 sweep + 6 mode 命名。
+- **階段 2（報告 punchline）predictive**：GT = 早期 signature 可預測最終 mode。當前 narrative 對應 oracle gap（下一段）。
+- **階段 3（進階 6 / 8）prescriptive**：GT = mode 知識改善決策（RL or hand-designed mitigation）。當前 narrative 對應進階 6 mode-as-RL-feature。
+
+現階段（descriptive）GT 三件事：
+
+- **Distinguishability** — 跨 seed 的 mode signature cluster 緊、mode 間距離大（silhouette / DB index 可量化）
+- **Completeness** — 每個 (heuristic × workload) cell 都能標到 mode；標不出來強迫新增 mode 或承認 taxonomy 不完整
+- **Utility** — 至少做到 predictive validity，最好做到 prescriptive oracle gap
+
+### 方法論決策：Oracle Gap 作為 Special Topic 報告 punchline
+
+報告結尾的可交付數字，同時做兩件事：證明 mode 資訊有量化價值（E 的 GT），以及給進階 6 RL 一個明確 target。
+
+定義：
+
+```
+X = single-best heuristic 跨 5 workload 平均 peak PE
+Y = mode-aware oracle（事先看穿 mode、選 best heuristic per workload）平均 peak PE
+Oracle Gap = Y - X  ← mode 資訊的價值上限
+```
+
+對應到 2026-05-18 RL 四層 baseline：oracle gap 就是「mode-aware upper bound」這層，跟「vanilla RL」之間的差距是進階 6 要去吃的空間。→ see decisions 2026-05-18 RL 評估的兩層架構。
+
+Narrative 收斂句（不承諾 RL 結果，只立 next-step target）：
+> 「Mode 資訊的價值上限是 Gap = Y - X。進階 6 將檢驗 RL agent 能吃下這個 Gap 的多少比例。」
+
+### 重要修正：PE 方向
+
+PE = packing efficiency，**越高越好**。mode-aware 改善的方向是更高 PE / 更低 discard / 更低 F，不是「更低 PE」。任何寫到「更低 PE」是 typo，要當下糾正。
+
+### 方法論決策：用 paired comparison 應對「無共識 benchmark」
+
+對話釐清「dynamic BP 沒共識 benchmark，workload 一變絕對數字就漂移，怎麼做 ablation？」——核心結論：**ablation 比的是「同 workload 上兩方法的差」，不是絕對 PE；paired gap 對 workload sensitivity 免疫**。
+
+問題背景：dynamic BP 工作負荷可變維度多——bin H×W、item size 分布、arrival rate λ、lifetime 分布、是否 burst——任一軸動絕對 PE 都會大幅漂移。Hopper-Turton 在 static 是共識，加上 arrival/departure 後就沒了。跨 paper 報「peak PE = 73.5%」這種數字幾乎沒比較意義。
+
+為什麼 ablation 不被摧毀：
+
+- 比的是「vanilla 對 mode-aware 在同一 workload 上的 gap」，不是絕對值
+- 範例：W1 上 vanilla 68% / mode-aware 73% → gap +5pp；W2 上 vanilla 52% / mode-aware 57% → gap +5pp。絕對值 68/52 不能比，但 gap +5/+5 可以比
+- Gap 不穩本身就是 finding：「mode 資訊在哪類 workload 起作用、在哪類失效」
+
+三層應對策略：
+
+- **Workload axis 變成研究變數**：4×5 factorial 已經在做。Workload 不是「隨便挑一個」是「刻意 sweep」。未來 RL ablation 同樣設計——訓練 workload 鎖定 declare，**測試時跑全部 5 種**，加 train-on-X-test-on-Y matrix 看 generalization。
+- **報 relative gap 不報 absolute**：論文 claim 應該是「相對 vanilla 改善 7pp [CI 5–9]，在 small-item 上不顯著（1pp [-1, 3]）」，不是「mode-aware PE = 73%」。第一種句型對 workload sensitivity 免疫。
+- **Sensitivity curves**：gap vs λ、gap vs lifetime、gap vs item-size-mean、gap vs item-size-variance 各畫一條。Reviewer 最在意「方法在什麼條件下有效」。例：「mode-aware 在 churn 0.3–0.7 單調改善，> 0.8 飽和」這個 finding 本身就是貢獻。
+
+Oracle Gap 的特殊性質：
+
+- X = single-best heuristic PE、Y = mode-aware oracle PE，**同 workload 上算**，gap = Y - X 是 paired difference
+- Workload 變難或變易，X 和 Y 同向漂，gap 可能仍穩定
+- Gap 不穩定的時候本身就是「mode 資訊在這類 workload 價值更高」的訊號
+- 比直接 claim「Y = 70%」robust 一個量級
+
+Mode-level 比 PE-level 更 robust（尚未充分利用）：
+
+- PE = 70% 在不同 workload 下意義天差地別
+- 但「BLF 在 large_items 下出現 Brick-wall mode」這個結構性陳述跨 workload 穩定——只要 item-size mean 過 threshold，brick-wall 就會出現
+- Mode taxonomy 的 claim 本質是 **conditional structural**（「在條件 C 下出現結構 S」），對 workload sensitivity 抗性強過 numerical performance
+
+未來 RL ablation 的具體實驗設計清單：
+
+- 訓練 workload 嚴格 declare（H×W、item 分布、λ、lifetime——一行 reproducibility note）
+- 每 cell ≥10 seeds，報 mean ± std
+- 5 workload 全測，產 gap matrix 不是單一數字
+- Sensitivity curves：在訓練 workload 周邊掃 λ、lifetime 各 5 點
+- OOD 測試：用沒訓練過的 workload，看 gap 衰減多快
+- Negative results 也報：哪幾個 workload 上 mode-aware 沒贏 → 反而增加可信度
+
+→ 與本日「GT 三層架構」「Oracle Gap」「2026-05-18 RL 評估多軸」三段互相補強：所有「比較」的可信度都建立在 paired same-workload comparison 之上。
+
+### 方法論決策：命名 mode 前的 4 項前置驗證
+
+對話釐清「目前是否真能說 workload 量化得出 fragmentation pattern」——核心結論：**現有 4 數字 signature 撐不起這個 claim，命名 mode 前必須先補 4 件事**。不補就命名等於把 seed=42 的單次觀察當證據。
+
+四項前置驗證（全部可用現有 4 heuristic × 5 preset 程式跑，不動 simulator）：
+
+1. **F@peak / mean/peak 跑滿 10 seeds**：目前這兩個 signature 元件只有 seed=42 一次觀察。`seed_sweep.py` 已跑 200 runs，CSV 加 2 欄即可，給 mean ± std。
+2. **Mode 視覺穩定性檢驗**：6 個 mode 候選是看 seed=42 那張 4×5 圖讀出來的。要 loop 10 seeds 各畫一張 4×5，紀錄每個 mode 出現比例（例如「Inland Island 9/10 seeds」）。穩定 < 6/10 的 mode 視為 seed artefact 退場。
+3. **Signature 空間分離檢定**：把 200 runs 的 4 數字當點，在 signature 空間做 cluster / scatter（PCA 或 任兩維），看不同 (heuristic × workload) cell 是否分群、還是雲糊在一起。這對應 [[GT 三層架構]] 的 Distinguishability。
+4. **Heuristic-intrinsic vs workload-induced mode 區分**：跨 5 preset 都出現的視為 heuristic-intrinsic（如 BLF brick-wall、shelf stripe），只在 1–2 preset 出現的才算 workload-induced。研究真正貢獻在後者；前者降級為 baseline behavior。
+
+**Why**：E 變體的 narrative 是「workload 量化得出 mode」，現在 4 數字裡有 2 個只有 n=1 seed、6 個 mode 候選沒做 reliability check、沒做統計分離、沒區分 heuristic vs workload 的貢獻。命名 mode 之後才被楊老師或 reviewer 問起這 4 點代價遠高於現在補完——尤其 #4，命名之後再砍 mode 會打亂整個 narrative 結構。
+
+**How to apply**：第 4 週流程從「prior work → 命名 mode → signature → mitigation → oracle gap」改為「prior work + 4 項前置 → 命名 mode → ...」。前置 #1–#2 跟 prior work 細讀可並行（CPU 不衝突）。
+
+**Fallback 評估**：如果 #2 砍掉一半 mode（剩 3 個）仍 ≥ 3 門檻，narrative 安全。如果 #4 後 workload-induced mode = 0（全是 heuristic-intrinsic），narrative 轉向「heuristic family signature 跨 workload 穩定」——本身就是發現，Oracle Gap 仍可算（best-per-workload 對 best-overall），進階 8 cross-domain 不受影響、進階 6 RL-feature 失基。再差到 signature 雲糊在一起（情境 C），Special Topic 轉成「方法論診斷 + 負面結果」報告，仍符合 bar。
+
+---
+
 ## 2026-05-18
+
+### 方法論決策：RL 評估的兩層架構（為進階 6 鋪設）
+
+對話釐清「RL 結果要基於 optimal 來優化嗎？」——拆成訓練 vs 評估兩件事。
+
+**RL 訓練不需要 optimal 標籤**：RL 不是 supervised learning，靠 reward signal 自己探索。mode label 是當 state feature 注入 inductive bias，不是當監督 label。
+
+**RL 評估的對照分層**（dynamic BP 下「optimal」是模糊的，要分層）：
+
+| 比較對象 | 怎麼算 | 用途 |
+|---------|--------|------|
+| Offline clairvoyant optimal | 預知整段 arrival/departure，IP solver 求事後最佳 | 理論上界；只能對小實例（n ≤ ~50） |
+| 強 heuristic baseline | BLF / Shelf / FFDH 直接跑 | 實務 floor |
+| Prior RL baseline | Burcea 2014 / Wei 2011 / Powers 2023 | 直接競品 |
+| **Vanilla RL（無 mode feature）** | 同 agent 架構但拿掉 mode | **關鍵 ablation——賣點所在** |
+
+**核心原則**：賣點是「相對於 vanilla RL 的改善」，不是逼近 clairvoyant optimal。Optimal 只在小實例當天花板參照，告訴 reviewer 整體還有多少空間。
+
+### 方法論決策：RL 評估的多軸選擇（不只是收斂速度）
+
+mode-aware RL 的 inductive bias 設計，預期改善的不是 final PE 而是後幾軸：
+
+| 評估軸 | 量化方式 | mode-aware 預期 |
+|--------|---------|----------------|
+| Final PE | 收斂後 PE | 不一定贏（vanilla 樣本夠多也可能學到隱式 mode） |
+| **Sample efficiency** | 達到 X% PE 所需 env steps | **大概率贏**——最自然的 inductive bias 賣點 |
+| **Generalization** | OOD workload（沒訓練過的分布）上的 PE | **可能贏**——mode signature 比 raw state 更 transfer |
+| **Robustness** | 跨 seed / 跨 workload 的 variance | **可能贏**——state 更 informative |
+| **Hard-case performance** | mode 集中出現的 instance 上的 PE | **應該贏**——inductive bias 設計目的 |
+
+**故事設計**：4–5 行的 ablation 表，故事是「X 軸明顯贏、Y 軸打平、Z 軸略輸但代價合理」。不要單押 final PE，那是 vanilla RL 最容易追上的軸。
+
+### 方法論決策：NP-hard 問題的參數設定（三層架構）
+
+問題的核心：不同參數 regime 下 BP 演算法行為完全不同，平均成一個數字會洗掉所有資訊。
+
+**Layer 1：用 benchmark instance family，不要自己亂生**
+
+| Benchmark | 特點 |
+|-----------|------|
+| Hopper-Turton (1999/2001) | 從已知 optimal 切出 instance，**OPT 已知** |
+| Berkey-Wang (1987) | 10 個 class，item size 分布不同 |
+| Martello-Vigo (1998) | 4 個 class，更刁鑽 |
+
+Dynamic 2D BP **沒有公認 benchmark**——要明確定義「改造 Hopper-Turton 變 dynamic 的方式」並公開，讓後人可複製。這是義務也是機會。
+
+**Layer 2：對制度參數做 factorial sweep**
+
+Dynamic BP 影響難度的關鍵參數：
+- Item size 分布（小 item vs 大 item 主導）
+- Aspect ratio 分布（正方形 vs 細長）
+- Lifetime 分布（短壽 vs 長壽、指數 vs heavy-tail）
+- Arrival rate / load factor（稀疏 vs 飽和）
+- Departure 是否預先知道（clairvoyant lifetime vs unknown）
+
+每個參數定 2–3 個 level，所有方法跑同一套 instance。產出「方法 × 參數設定」表格。
+
+**Layer 3：報告時做 stratification，不要平均後比**
+
+不同 regime 不同方法贏：
+- Light load → 都接近 OPT，比不出差異
+- Medium load → 演算法差異最明顯
+- Heavy load → 都崩，比誰崩得慢
+
+報告格式按 regime 切：
+
+```
+Load level    BLF    Shelf   Vanilla RL   Mode-aware RL
+Light (0.3)   0.95   0.96    0.97         0.97         ← 都差不多
+Medium (0.6)  0.78   0.82    0.85         0.89         ← 賣點在這
+Heavy (0.9)   0.55   0.62    0.61         0.71         ← 賣點更大
+```
+
+### 與 E 階段的連動
+
+E 階段 failure mode taxonomy 正是 Layer 2/3 的前置工作：「在 (item-dist × lifetime-dist × load) 的哪個 regime，哪個 heuristic 出現哪個 failure mode」。Taxonomy 一旦建好，進階 6 的 RL 實驗就有現成 regime 切分依據——不是隨便切 light/medium/heavy，而是按發現的失敗模式切，比一般 RL 論文紮實。
+
+**E 階段量化（區別於進階 6）**：
+- E 量化 mode 的可辨識性 / 覆蓋率 / signature 一致性，**不是 beat baseline PE**
+- 進階 6 才回頭比 PE / fragmentation，且主軸是 mode-aware vs vanilla RL 的 ablation
 
 ### Heuristic 集從 {BLF, NFDH, FFDH, Shelf} 改為 {BLF, NFS, FFS, BFS}
 
@@ -57,6 +237,8 @@
 - 若 baseline 跑不通 → 觸發題目層級重議（不太可能但保留 safety net）
 
 ### 方法論釐清：候選 mode 名字是假設，不是已驗證結論
+
+> SUPERSEDED 2026-05-18(晚)：4×5 factorial sweep 跑出後，候選 mode 已從 4 個擴為 **6 個從圖直接讀出**（Brick-wall / Horizontal stripe / Inland Island / Top sliver / Shelf abandonment / Item-too-tall failure）。原 4 名中只有 Inland Island 保留，其餘三個（Sliver Strip / Boundary Lockout / Staircase Skyline）**未驗證即被新觀察取代**。→ see experiments 2026-05-18(晚)。本段方法論原則（假設 vs 結論）仍有效。
 
 「Sliver Strip 細條夾縫 / Inland Island 內陸孤島 / Boundary Lockout 邊界鎖死 / Staircase Skyline 階梯天際線」這 4 個名字是對話中提出的 **starting hypothesis（起始假設）**，**不是 prior work 已驗證的結論**。其知識基礎強度：
 - **強**：dynamic 2D BP 會 fragment（Tabero 2006 / Powers 2023 / Wei 2011 實證過）
@@ -155,6 +337,8 @@ H × W 因子設計本身就是 prior work 沒做的：Tabero / Powers 只看 ag
 
 ### 仍待決定（已縮減）
 
+> SUPERSEDED 2026-05-14：narrative 提前收斂至 E 變體 → see #2026-05-14。碩論場域維持延後決策。**仍未決**：約楊老師 sanity check、寫 journal.md。
+
 - A 原版（heuristic 退化比較）vs E 變體（failure mode taxonomy）的 narrative（5/31 前定）
 - 碩論場域（碩論階段決定）
 - 是否約楊老師 sanity check Special Topic 方向
@@ -182,6 +366,8 @@ H × W 因子設計本身就是 prior work 沒做的：Tabero / Powers 只看 ag
 - Special Topic 只需 presentable demo；碩論才需要填真實 gap
 
 ### 尚待決定的開放選項
+
+> SUPERSEDED 2026-05-14：前 4 個選項已拍板——E 變體 = 對應「diagnostic 失敗模式地圖」；abstract framing 取代「場域變體 vs 純理論」二選一；場域選擇延後到碩論階段（5/12 即決）。**仍未決**：約老師 sanity check、寫 journal.md。
 
 - 是否接受「Special Topic 重新定位為 diagnostic survey（為碩論做的失敗模式地圖）」
 - 是否走「場域變體」路線（碩論貢獻較可能）vs 純理論（成熟封頂，貢獻難）

@@ -174,3 +174,62 @@ def peak_occupancy_snapshot(snapshots):
     if not snapshots:
         return None
     return max(snapshots, key=lambda s: np.count_nonzero(s[1]))
+
+
+def sample_snapshots(snapshots, k, *, include_peak=True):
+    """Pick ~k snapshots roughly equally spaced over the run's time span.
+
+    The simulator stores a snapshot after every successful event, which is
+    far too many for a multi-frame visual. This helper sub-samples them for
+    week-4 mode naming — we want to see how the mode *evolves*, not every
+    micro-event.
+
+    Strategy: pick k target times evenly spaced between the first and last
+    snapshot's t, then for each target keep the snapshot with the closest t.
+    Optionally substitute the peak-occupancy snapshot for the nearest target
+    so the densest moment is always in the set (modes are clearest at peak).
+
+    Parameters
+    ----------
+    snapshots
+        Iterable of ``(t, grid)`` as produced by the simulator.
+    k
+        Target number of frames. The returned list may be shorter if the
+        run produced fewer than ``k`` distinct snapshots.
+    include_peak
+        If True (default), substitute the peak-occupancy snapshot into the
+        sample at whichever target time is closest to its tick. The set
+        size stays at most ``k``.
+
+    Returns
+    -------
+    list of (t, grid)
+        Time-ordered, deduplicated. Empty list if ``snapshots`` is empty.
+    """
+    if not snapshots or k <= 0:
+        return []
+    snapshots = list(snapshots)
+    if len(snapshots) <= k:
+        return sorted(snapshots, key=lambda s: s[0])
+
+    ts = np.array([t for t, _ in snapshots])
+    t_min, t_max = int(ts.min()), int(ts.max())
+    if t_min == t_max:
+        # All events at same tick — return the first k. (Degenerate; we'd
+        # rather hand back something than die on a zero-width span.)
+        return snapshots[:k]
+
+    targets = np.linspace(t_min, t_max, k)
+    picked_idx = sorted({int(np.argmin(np.abs(ts - target))) for target in targets})
+
+    if include_peak:
+        peak_idx = int(np.argmax([np.count_nonzero(g) for _, g in snapshots]))
+        if peak_idx not in picked_idx:
+            # Replace the picked index closest in time to peak — keeps the
+            # sample size stable while guaranteeing peak is in the set.
+            picked_ts = np.array([ts[i] for i in picked_idx])
+            closest = int(np.argmin(np.abs(picked_ts - ts[peak_idx])))
+            picked_idx[closest] = peak_idx
+            picked_idx = sorted(set(picked_idx))
+
+    return [snapshots[i] for i in picked_idx]
