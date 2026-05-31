@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-05-25 — Oracle Gap 計算
+
+用 seed_sweep_raw.csv（4 heuristic × 5 preset × 30 seeds = 600 runs）計算 Oracle Gap。
+
+**方法**：
+- X = single-best heuristic 的 grand mean peak PE（跨 5 workload 平均）
+- Y = mode-aware oracle（每個 workload 挑最佳 heuristic）的平均 peak PE
+- Gap = Y − X
+
+**Mean peak PE per (heuristic, workload)**：
+
+- BLF: heavy 0.7207 / large 0.8079 / light 0.7260 / mixed 0.6427 / small 0.2075
+- NFS: heavy 0.3184 / large 0.4551 / light 0.3272 / mixed 0.3254 / small 0.1614
+- FFS: heavy 0.4039 / large 0.4911 / light 0.4169 / mixed 0.3698 / small 0.1902
+- BFS: heavy 0.4064 / large 0.4888 / light 0.4195 / mixed 0.3703 / small 0.1902
+
+**Grand mean per heuristic（X 候選）**：BLF 0.6210 / BFS 0.3751 / FFS 0.3744 / NFS 0.3175
+
+**Oracle picks per workload（Y 計算）**：5/5 workload 全選 BLF
+
+**結果**：X = 0.6210, Y = 0.6210, **Gap = 0%**。BLF 在 150/150 個 run 全勝，per-seed 也無例外。
+
+**解讀**：shelf 家族（NFS/FFS/BFS）與幾何式 BLF 不在同一等級，oracle 永遠選 BLF。現有 heuristic 集合無法支撐 dynamic switching narrative。→ ideas 2026-05-25（擴充方向）
+
+---
+
 ## 2026-05-23 — 前置 #2–#5 一次跑完：30-seed sweep + signature cluster + intrinsic/induced 分類
 
 對話決定 seeds 拉到 30、用同一批 600 runs 把前置 #2/#3/#4/#5 全部跑出來。產出 3 個新檔：`figures/seed_grid/grid_view_seed01..30.png`（30 張）、`figures/signature_2d.png`、`figures/signature_pca.png`、新腳本 `scripts/mode_stability_sweep.py` + `scripts/signature_analysis.py`。
@@ -84,7 +110,8 @@ PCA 前 2 維 92% 變異；2D 圖（peak_pe × discard）肉眼可見 **7 個視
 
 E 變體貢獻邊界比原本想的窄但**清楚**：4 個 workload-induced mode 是新的、可量化、視覺可辨。Mode 數量還在 ≥ 3 門檻之上，fallback 沒被觸發。
 
-Oracle Gap 計算可開始：peak signature 分群清楚 → mode-aware oracle 知道在 (heuristic, preset) 配對下選誰，比 single-best 跨 5 preset 平均應有可觀 gap。
+> SUPERSEDED 2026-05-25：Oracle Gap 已算出 = 0%（BLF 全勝），非「可觀 gap」→ see experiments#2026-05-25
+~~Oracle Gap 計算可開始：peak signature 分群清楚 → mode-aware oracle 知道在 (heuristic, preset) 配對下選誰，比 single-best 跨 5 preset 平均應有可觀 gap。~~
 
 ### 副產物 finding（值得記在 ideas）
 

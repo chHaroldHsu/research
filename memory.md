@@ -17,30 +17,25 @@
 
 ## 下次繼續（接續時讀這段）
 
-前置 #2–#5 **全部完成**（2026-05-23，30 seeds × 600 runs）。剩下 **#1 prior work** 即可開始命名 mode。最新分析 → experiments 2026-05-23。
+老師 meeting 完成（2026-05-25）。主軸確認：根據 bin 狀態動態選最佳 heuristic。但 **Oracle Gap = 0%**（BLF 全勝 150/150 runs），現有 heuristic 集合無法支撐 dynamic switching。→ exp 2026-05-25、decisions 2026-05-25
 
-**A. 剩餘前置**
+**優先順序（調整後）**：
 
-1. **prior work 細讀**（命名 mode 前必須）：Burcea 2014 / Wei 2011 IJCAI / Powers 2023——避開重命名 + 釐清貢獻邊界（dynamic-only mode 是哪些）
+1. **prior work 細讀**：Burcea 2014 / Wei 2011 / Powers 2023（原目標：避開重命名）+ **新目標：找 dynamic heuristic switching 相關研究 + 查 DRL 論文的衡量指標與比較對象**（老師問的）
+   - 〔2026-05-30 部分完成〕已掃出「依狀態選 heuristic」= selection HH（Özcan-Parkes-Asta）+ RL-for-BP 成熟範式 → 核心 idea 非新，novelty 須靠 2D+departure+可解釋 mapping+視覺化的組合（→ literature-map / ideas 2026-05-30）。**仍欠**：(a) 窮盡確認 2022–2025 有無「2D DBP with departure + RL/HH 動態選法」（novelty 存亡）；(b) DRL 論文衡量指標 + 比較對象的逐篇整理。
+2. **擴充 heuristic 集合**：加入幾何式方法（Maxrects / Skyline / Guillotine），讓不同 heuristic 在不同 mode 下互有勝負。→ ideas 2026-05-25
+3. **重算 Oracle Gap**：擴充後重跑，確認 Gap > 0 → dynamic switching 有價值
+4. **命名 mode + 報告**：6 個 mode 已存活（≥ 60% 門檻），待 #1 完成後正式命名
 
-**B. 命名 mode 起手**
-
-2. **命名 mode**：6 個量化 mode 已存活（≥ 60% 門檻），套統一命名規則
-   - Heuristic-intrinsic（baseline）：Brick-wall、Horizontal-stripe
-   - Workload-induced（貢獻）：Top-sliver、Sparse-BLF、Item-too-tall、Sparse-stripe
-   - **退場**：Inland Island（signature 重疊 d/σ=0.16，視覺無區別）、Shelf abandonment（NFS 與 FFS/BFS 同 mode 標籤）
-3. **寫 mode signature**：每 mode 一組 (peak PE, discard, mean/peak) + 視覺特徵 + 30-seed 穩定比例。F@peak 已從 signature 完全降級
-4. **Mitigation 對照表**：每 mode 對哪個 heuristic 怎麼緩解（猜想可標 [假設]）
-5. **跑 Oracle Gap**：X = single-best heuristic 平均 PE / Y = mode-aware oracle 平均 PE / Gap = Y - X → 報告 punchline + 進階 6 target。GT 三層架構見 decisions 2026-05-22
-6. **報告 8 成完成**：含進階 6 (RL-feature) / 8 (cross-domain) future work 段
-
-**狀態指標**：signature 改為 **2D（peak PE + discard）為主、mean/peak 為輔**（F@peak 完全降級）；PCA 確認 92% 變異在 2D；7 個視覺 cluster 清楚分群。新發現：**light_dep ≡ heavy_dep 在 peak signature 上無法分離**（d/σ ≤ 0.16，跨所有 heuristic）→ 時序維度才能區分。FFS ≡ BFS 在 4 個 metric 全部成立。最新數據 → experiments 2026-05-23。
+**不變的狀態指標**：signature 2D（peak PE + discard）為主、mean/peak 為輔；PCA 92% 變異在 2D；FFS ≡ BFS；light_dep ≡ heavy_dep 在 peak signature 上無法分離。
 
 
 ---
 
 ## 重要提醒
 
+- **Oracle Gap = 0%**（BLF 全勝）→ 現有 4 heuristic 不支撐 dynamic switching；擴充幾何式 heuristic 是前提條件
+- **Per-timestep oracle ≥ per-workload oracle**（嚴格超集）→ per-workload = 0 不蘊含 per-timestep = 0；實作前必須先拍板 3 個設計選擇（lookahead 範圍 / switching cost / beam vs greedy）→ decisions 2026-05-30
 - 場域選擇延後到碩論階段，Special Topic 不綁特定 application
 - 碩論貢獻評估**不**套用於 Special Topic 選題（會癱瘓）
 - 重思考用 English 省 token，最終產出用中文

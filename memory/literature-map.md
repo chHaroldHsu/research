@@ -26,12 +26,14 @@
 | **3. Compaction / Defragmentation** | 週期 compaction、cost-aware migration、threshold-triggered | FPGA + GPU/Cloud 系統 | Koester 2007（FPGA defrag） |
 | **4. Learning-Augmented / RL** | Deep RL placement、Pointer Networks、GNN encoder、with predictions | NeurIPS / MLSys | Hu 2017、Zhao 2021、Lykouris-Vassilvitskii 2018 |
 | **5. Competitive Analysis / Approximation** | 競爭比證明、bounded-space variants、stochastic BP | OR 理論 | Coffman-Garey-Johnson 1983；Csirik-Woeginger 系列；Christensen 2017 survey |
+| **6. Selection / Generation Hyper-heuristic**（2026-05-30 新增） | policy-matrix 選法、apprenticeship learning、tensor-based HH、GP-evolved heuristic | EC / AI（Nottingham 為核心） | Asta-Özcan-Parkes 2013/2016；Burke-Hyde-Kendall GP 系列 |
 
 **對 Special Topic 的定位**：
 - 1 + 2 是 baseline 主力（會跑的就是這些）
 - 3 進階（碩論階段才需要）
 - 4 現代延伸（碩論可能延伸方向）
 - 5 理論框架（懂概念即可，不需自證）
+- 6 **與老師「依盤面選 heuristic」主軸字面對應的 prior art 家族**（2026-05-30 才補；見下方 5/30 scan）
 
 ---
 
@@ -63,6 +65,12 @@
 - `bin packing with predictions`
 - `learning-augmented algorithms packing`
 
+### Hyper-heuristic / 選法（2026-05-30 新增）
+- `selection hyper-heuristic bin packing`
+- `apprenticeship learning hyper-heuristic`
+- `policy matrix online bin packing`
+- `instance-aware heuristic selection`
+
 ### 現代場域（現階段不投入，留作碩論場域選擇參考）
 - `GPU memory allocator fragmentation`
 - `VM placement dynamic`
@@ -78,6 +86,7 @@
 - **Bazargan, Steiger, Walder, Platzner**（FPGA dynamic placement）
 - **Christensen, Khan, Pokutta, Tetali**（2017 multi-dim BP survey 作者）
 - **Csirik, Woeginger**（online BP 理論系列）
+- **Özcan, Parkes, Asta（Nottingham）**（2026-05-30 新增）— selection / apprenticeship hyper-heuristic for online BP，核心競品群組
 
 ---
 
@@ -87,6 +96,7 @@
 - **FPGA Dynamic Placement**：FPL、FPGA、FCCM、DAC、IEEE Trans. Computers、ACM TRETS
 - **學習增強 / RL**：NeurIPS、ICML、ICLR、MLSys
 - **現代系統應用**：OSDI、SOSP、NSDI、ATC、MLSys
+- **Hyper-heuristic**：GECCO、EvoStar、Expert Systems with Applications、Information Sciences（2026-05-30 新增）
 
 ---
 
@@ -133,6 +143,37 @@
 ## 已掃描清單（持續更新）
 
 > 格式：`- [paper-id] 作者 (年) 標題 | 家族 | 對 H1–H5 的關係 | 對 next-step 的啟示`
+
+### 2026-05-30 「依盤面狀態動態選 heuristic」prior-art 掃描
+
+**觸發**：老師 5/25 主軸 = 找出 workload pattern，未來依某時刻 bin 狀態動態選最佳 heuristic（下棋／圍棋比喻）。本次回答「這個核心 idea 是否已有人做」。
+
+> ⚠️ 本次 Scholar / Semantic Scholar 直連被 429/503 擋；標題年份來自 WebSearch 摘要 + DBLP/arXiv 片段，**正式引用前須逐筆回原文核對 venue 全名與頁碼**。
+
+**結論（最重要一句）**：**「依狀態動態選 heuristic」本身已是成熟範式**——這正是 *selection hyper-heuristic* + *RL-for-BP* 兩條線在做的事。老師的下棋比喻 = RL 把 bin 狀態當 state、選 action 的標準框架。
+→ 對應 ideas：核心 idea 從 [假設「沒人做過」] 修正為 [已驗證 2026-05-30：範式存在；novelty 須靠「2D + departure + 可解釋 pattern mapping + 視覺化」的組合，而非「動態選 heuristic」這件事本身]。
+
+**(A) Selection / apprenticeship hyper-heuristic（字面最近的 prior art）**
+- Asta, Özcan, Parkes, Etaner-Uyar (2013, ECML) *Generalizing hyper-heuristics via apprenticeship learning* | 家族 6 | **核心 idea 已被占** | 對 online BP：用小實例上 expert policy matrix 當老師，觀察「bin 特徵 + expert 動作」做 k-means 分類學會泛化的選法 → 就是「依狀態選 heuristic」。**但 online（只到達）、1D、無 departure**。
+- Özcan, Parkes (2011, GECCO) *Policy Matrix Evolution for Generation of Heuristics* | 家族 6 | 同上 | policy matrix = 對每個決策選項給分、取最高分 → 「依狀態打分選法」的具體機制。1D online。
+- Asta, Özcan, Parkes (2016, Expert Systems with Applications) *CHAMP: Creating Heuristics via Many Parameters for online bin packing* | 家族 6 | 核心 idea 已被占 | GA 搜 policy-matrix 形式的 heuristic 空間。1D online。
+- Asta, Özcan (2015, GECCO) *A Tensor Analysis Improved GA for Online Bin Packing*；Asta et al. (2016, Information Sciences) *tensor-based selection HH for cross-domain* | 家族 6 | 部分 | 用 tensor 表示「狀態→選法」結構。仍 online。
+
+**(B) (Deep) RL for BP（圍棋盤面→下一手的字面實現）**
+- Coffman, Garey, Johnson (1983, SIAM J. Comput. 12(2):227–258) *Dynamic Bin Packing* | 家族 5 | 場域奠基 | DBP（arrival+departure, lifespan）原始定義；證 First-Fit worst-case bound，且 no online algorithm 明顯優於 FF。我的 departure 場域源頭。
+- Zhao et al. (2021, AAAI) *Online 3D BP with Constrained Deep RL*；Verma et al. (2020) *Generalized RL for Online 3D BP*；Zhang et al. (2021) *Attend2Pack* | 家族 4 | 部分 | RL 看 bin 狀態學 placement。**多為 3D / 1D、online-only、學擺放位置（非選既有 heuristic）、無 departure**。
+- Zhao, Li, Lin (2024, Knowledge-Based Systems) *Dynamic multi-modal DRL for 3D BPP*（含 PCS-DRL「adaptive operator selection」）| 家族 4 | **值得細看** | 有「自適應選 operator」味道，最接近「動態選法」，但 3D、語意是選擺放 operator 非選 heuristic 家族、departure 不明。
+- González-San-Martín, Cruz-Reyes et al. (2024, Computación y Sistemas) *Deep study on ML in BPP* | 家族 4 review | 部分 | 唯一在摘要同時提 "departure time" + "cooperative heuristics" + DRL；當 review 入口查它引哪些 departure 工作。
+
+**(C) Hierarchical / instance-aware HH（依實例特徵選低階 heuristic）**
+- "A hierarchical hyper-heuristic for the bin packing problem" (2022, Soft Computing) | 家族 6 | 部分 | 依待解實例主要特徵選 low-level heuristic → 「依狀態選法」的 offline/instance 版。確認它是 per-instance 還是 per-step。
+
+**縫隙定位（我可守的地盤；= novelty 須建立在組合上）**
+1. **departure / fragmentation regime 下的動態 heuristic 切換** ← selection-HH 與多數 RL-for-BP 都 online-only 或 static，這塊最薄、最靠近我。
+2. **2D**（RL 多 3D/1D；selection-HH 多 1D）。
+3. **顯式、可解釋的 workload-pattern → heuristic mapping**（vs NN 隱式吃進 state）——對應我的 mode taxonomy。
+4. **盤面狀態視覺化**作為一等公民（契合系所）。
+※ 但 #1+#2 是否已被 2022–2025 新作占走，**尚未窮盡確認**（本次直連被擋）——這是 novelty 存亡關鍵，需專門再掃一輪。
 
 ### 2026-05-14 快速 positioning scan（agent 驅動 ~30 分鐘）
 

@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-05-25
+
+### 老師 meeting 完成 + Oracle Gap 算出
+
+**Meeting 成果**：
+- 老師認可主軸方向：根據 bin 狀態動態選最佳 heuristic（棋盤比喻）
+- 下一步：查找是否有相關的 existing approach（dynamic heuristic switching for BP）
+- 老師也問 DRL 那篇論文的衡量指標是什麼、跟誰比較——需要回去查
+
+**Oracle Gap 實測**：Gap = 0%，BLF 在 150/150 run 全勝。原因是 shelf 與幾何式 heuristic 不在同一等級。→ exp 2026-05-25
+
+**新卡關**：現有 4 heuristic 集合無法支撐 dynamic switching narrative。要讓主軸成立，需擴充幾何式 heuristic（Maxrects / Skyline / Guillotine）。→ ideas 2026-05-25
+
+**調整後的優先順序**：
+1. prior work 細讀（原本就是 #1，現在多一個目標：找 dynamic heuristic switching 相關研究）
+2. 擴充 heuristic 集合（讓 Oracle Gap > 0）
+3. 重算 Oracle Gap → 確認 dynamic switching 有價值
+4. 命名 mode + 報告
+
+---
+
 ## 2026-05-23
 
 ### 第 4 週前置 #2–#5 一次跑完（30-seed sweep）
@@ -26,9 +47,11 @@
 
 **剩下卡關**：
 
-- 第 4 週剩 #1 prior work（命名 mode 前必須）；楊老師 sanity check 仍未約
+> SUPERSEDED 2026-05-25：老師 meeting 已完成 → see progress#2026-05-25
+- ~~第 4 週剩 #1 prior work（命名 mode 前必須）；楊老師 sanity check 仍未約~~
 - Mode 數量 6 個 > 3 門檻，fallback 安全
-- Oracle Gap 計算可開始：cluster 分群清楚 → mode-aware oracle 有明確選法
+> SUPERSEDED 2026-05-25：Oracle Gap 已算出 = 0%，BLF 全勝 → see experiments#2026-05-25
+- ~~Oracle Gap 計算可開始：cluster 分群清楚 → mode-aware oracle 有明確選法~~
 
 ---
 
@@ -46,7 +69,8 @@
 ### 卡關 / 待決
 
 - 第 4 週進前必須讀完 Burcea 2014 / Wei 2011 / Powers 2023（避免重命名 prior work mode）
-- 楊老師 sanity check 仍未約
+> SUPERSEDED 2026-05-25：老師 meeting 已完成 → see progress#2026-05-25
+- ~~楊老師 sanity check 仍未約~~
 
 ---
 
@@ -94,7 +118,8 @@ BLF × 5 preset（n=200, seed=42, 50×50 bin）跑出來：
 ### 卡關 / 待決
 
 - **prior work 細讀**：Burcea 2014 / Wei 2011 IJCAI / Powers 2023 全文還沒做（mode 命名前必須做）
-- **楊老師 sanity check**：還沒約
+> SUPERSEDED 2026-05-25：老師 meeting 已完成 → see progress#2026-05-25
+- ~~**楊老師 sanity check**：還沒約~~
 - **fallback 檢核點**：第 3 週末若 ≥ 3 個 distinct mode 找不出來，要觸發退回變體 A
 
 ---

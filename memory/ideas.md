@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-05-30
+
+### 核心 idea 的 novelty 狀態修正 [已驗證 2026-05-30]
+
+針對老師主軸（依某時刻 bin 狀態動態選最佳 heuristic／下棋比喻）做 prior-art 掃描 → **這個範式已存在**：就是 *selection hyper-heuristic*（Özcan-Parkes-Asta 的 policy-matrix / apprenticeship learning）+ *RL-for-BP*。下棋比喻 = RL 把狀態當 state、選 action 的標準框架。細節與引用 → literature-map 2026-05-30。
+
+- 原本隱含的 [假設「依狀態選 heuristic 沒人做過」] → 作廢。
+- **novelty 不在「動態選 heuristic」這件事，而在組合**：2D + departure/fragmentation + 可解釋的 workload-pattern→heuristic mapping（= 我的 mode taxonomy）+ 視覺化。對應本檔 2026-05-25 方向 C（per-timestep oracle）= 字面就是 RL 框架，要守住差異化必須掛在上述組合上。
+- **存亡關鍵未結案**：2022–2025 有沒有人已做「2D DBP **with departure** + RL/HH 動態選法」尚未窮盡確認（5/30 直連被擋）。這條若被占走，per-timestep 動態選法的 framing 要再退一步靠 taxonomy/視覺化。→ 下輪精讀第一優先。
+
+---
+
+## 2026-05-25
+
+### Oracle Gap = 0% → heuristic 集合需要擴充
+
+用 seed_sweep_raw.csv（600 runs）算出 Oracle Gap：BLF 在 150/150 個 run（所有 workload × 所有 seed）全勝，Gap = Y − X = 0%。原因：BLF（幾何式）和 NFS/FFS/BFS（shelf 式）不是同等級的方法，shelf 天生放棄 y 軸自由度，PE 天花板低。
+
+**結論**：現有 4 heuristic 無法支撐 dynamic switching narrative——oracle 永遠選 BLF，沒有「根據 mode 切換」的空間。
+
+**未來實驗設計（讓 Oracle Gap > 0 的三個方向）**
+
+- **方向 A：擴充幾何式 heuristic**（最優先）——加入 Maxrects、Skyline、Guillotine 等幾何式方法，讓同等級 heuristic 之間在不同 workload/mode 下互有勝負。這是讓 dynamic switching 成立的最直接路徑
+- **方向 B：換 objective function**——從純 peak PE 改成複合指標（如 `PE − λ × discard_rate`），discard_rate 高的場景可能翻盤
+- **方向 C：per-timestep oracle**——不是整場選一個 heuristic，而是每個 item 到來時根據當前 bin snapshot 選最佳 heuristic。更接近老師說的「下棋」比喻，但實作門檻較高，需要 real-time state feature extraction
+
+**與老師 5/25 meeting 的連結**：老師建議的主軸是「根據棋盤狀態動態選策略」，Oracle Gap = 0% 說明現有 heuristic 集合不足以展示這個價值。方向 A 是讓此主軸成立的前提條件。→ decisions 2026-05-25
+
+---
+
 ## 2026-05-23
 
 ### 從前置 #2–#5 副產物冒出的延伸方向

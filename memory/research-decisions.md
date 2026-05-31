@@ -5,6 +5,49 @@
 
 ---
 
+## 2026-05-30
+
+### 方法論決策：per-timestep oracle 定義（未來實作前必須先拍板）
+
+對話釐清「per-workload oracle Gap = 0，per-timestep 還會不會 > 0」——核心結論：**per-timestep oracle ≥ per-workload oracle**（前者決策空間是後者嚴格超集），所以 per-workload = 0 不代表 per-timestep = 0；但兩個 oracle 在現有 heuristic 集合（BLF 跨 5 workload 平均勝下一名 24.6 pp）下，per-timestep gap 即使 > 0 也很可能小到不足以撐 narrative。仍應先擴 heuristic 集合再上 per-timestep。→ ideas 2026-05-25 路徑 C、decisions 2026-05-25
+
+**Per-workload vs per-timestep oracle 差別**：
+
+- Per-workload：事先知道 workload type，整場鎖一個 heuristic。決策粒度 = 每 run 一個（150 個決策點 / 600 runs）。對應問題「事先知道是 light_departure，應該選誰一路跑到底？」
+- Per-timestep：每個 item arrival 來時看當下 bin state 為這顆 item 選 heuristic，下一顆可能換。決策粒度 = 每 item 一個（n=200, 30 seed, 5 preset → 30000 個決策點）。對應老師「下棋」比喻——每步看盤面選招
+- 數學關係：per-timestep oracle 至少能模仿 per-workload oracle（每步都選同一個），所以 Gap(per-timestep) ≥ Gap(per-workload)
+
+**Per-workload = 0 不蘊含 per-timestep = 0 的情境**：
+
+- 情境 A（per-timestep 也 = 0）：BLF 每一步都是當下最佳選擇，不是只贏在累積平均
+- 情境 B（per-timestep > 0）：BLF 贏在累積但個別時刻 myopic 失誤。例如 bin 半滿剩一塊細長空間，BLF 為塞當下 item 切碎那塊空間；改用 BFS 開新 shelf 短期 PE 降一點，但保住未來 large item 容納空間。整場 BLF 還是贏，但某些時刻換手更好
+
+**Why 仍要先擴 heuristic 集合而非直接做 per-timestep**：BLF 對下一名差 24.6 pp 是結構性弱點（shelf 放棄 y 軸自由度），不是某幾步失誤造成的。在這種懸殊差距下，per-timestep gap 即使 > 0 也很可能是噪音級，要說服 reviewer「動態切換有價值」碩論慣例至少 3–5 pp gap。先讓 per-workload Gap > 0，per-timestep 才有顯著放大空間。
+
+**Per-timestep oracle 的三個必須拍板的設計選擇**（實作前要先定義清楚，不然 Gap 數字無法解讀）：
+
+- **Lookahead 範圍**：oracle 看 1 步、k 步、還是看完整 future arrival/departure schedule？看越遠越強，但越遠越偏離「dynamic online」設定。Clairvoyant（看穿整段 future）對應 decisions 2026-05-18 RL 評估的「Offline clairvoyant optimal」層，是理論上界
+- **Switching cost / state handoff**：item 已被 BLF 擺進 bin，下一步換 NFS，NFS 內部 state（哪些 shelf 已開、x-cursor 位置）如何初始化？BLF 的擺放對 shelf state 沒貢獻，硬切換會讓 shelf heuristic 從錯誤 state 起跑
+- **Beam vs greedy**：每步真的窮舉 4 個 heuristic 各跑完整場再回溯（NP-hard 級算力，只能小實例），還是 1-step greedy + 啟發式評估下一步？前者是理論定義，後者是實務 proxy
+
+**Clean 理論定義（推薦作為報告基準）**：每個 item arrival 時刻 t，對每個 heuristic h 都把該 item 用 h 擺一次，然後從 t+1 開始用該 h 跑完剩餘 trajectory；取最終 peak PE 最高的 h 當作 t 時刻 oracle 的選擇。這是 lookahead = 整段 future + greedy switch 的版本，算力 O(H × N × T) per run（H heuristic 數、N item 數、T sim 時間）。對 n=200 量級可行但要 batch run。
+
+**How to apply**：未來真的做 per-timestep oracle 時，報告必須在 method section 明示三個選擇（lookahead 範圍 / switching cost 處理 / 評估方式），且基準版用 clean 理論定義；如果實務上太慢，再加 ablation 比「greedy 1-step」「k-step lookahead」與「clairvoyant」三檔差距。任何沒明示這三項的 per-timestep gap 數字都站不住腳。
+
+---
+
+## 2026-05-25
+
+### 老師 meeting：主軸確認 + Oracle Gap 實測結果
+
+**老師建議的主軸**：找出每個 workload 下的 pattern，未來能根據某一時刻的 bin 狀態動態選擇最佳 heuristic——類似 ML 下棋，每步根據棋盤狀態選最優行動。此方向與既有 GT 三層架構（→ decisions 2026-05-22）的 Prescriptive 層直接對應。
+
+**Oracle Gap 實測**：用 seed_sweep_raw.csv（4 heuristic × 5 preset × 30 seeds = 600 runs）計算，結果 Gap = 0%。BLF 在 150/150 個 run 全勝，oracle 永遠選 BLF。原因：shelf 家族（NFS/FFS/BFS）與幾何式 BLF 不在同一等級。
+
+**待決**：要讓 dynamic switching narrative 成立，需擴充 heuristic 集合（加入 Maxrects / Skyline / Guillotine 等幾何式方法），使不同 heuristic 在不同 mode 下互有勝負。→ ideas 2026-05-25
+
+---
+
 ## 2026-05-22
 
 ### 方法論決策：E variant 的 ground truth 三層驗證架構
@@ -200,7 +243,8 @@ E 階段 failure mode taxonomy 正是 Layer 2/3 的前置工作：「在 (item-d
 
 **未取 NFDH/FFDH 作 offline upper bound 對照**：實作 + 解讀成本上升；narrative 也會被「online vs offline 差距」分散注意力。若第 3 週發現需要量化「online 損失多少」，再考慮加。
 
-**為何 4 個夠不另加 Skyline**：BLF 已是無 shelf 結構的代表，BFS 與 FFS 形成「best vs first」對照組，4 個已涵蓋「無結構 / 順序開啟 / 緊湊匹配」三軸。Skyline 與 BLF 重疊度高，先省下。
+> SUPERSEDED 2026-05-25：Oracle Gap = 0% 證明需擴充幾何式 heuristic（Maxrects / Skyline / Guillotine）→ see decisions#2026-05-25、ideas#2026-05-25
+~~**為何 4 個夠不另加 Skyline**：BLF 已是無 shelf 結構的代表，BFS 與 FFS 形成「best vs first」對照組，4 個已涵蓋「無結構 / 順序開啟 / 緊湊匹配」三軸。Skyline 與 BLF 重疊度高，先省下。~~
 
 ---
 
